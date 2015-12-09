@@ -22,7 +22,7 @@ This example expects a USB cable connected from your development PC to the Type 
 	</Item>
 	<Item Name="NI roboRIO" Type="RT myRIO">
 		<Property Name="alias.name" Type="Str">NI roboRIO</Property>
-		<Property Name="alias.value" Type="Str">10.10.8.213</Property>
+		<Property Name="alias.value" Type="Str">172.22.11.2</Property>
 		<Property Name="CCSymbols" Type="Str">TARGET_TYPE,RT;OS,Linux;CPU,ARM;DeviceCode,76F2;</Property>
 		<Property Name="crio.ControllerPID" Type="Str">76F2</Property>
 		<Property Name="crio.family" Type="Str">ARMLinux</Property>
@@ -185,7 +185,6 @@ AddOutputFilter chunkFilter
 			<Item Name="NiFpgaLv.dll" Type="Document" URL="NiFpgaLv.dll">
 				<Property Name="NI.PreserveRelativePath" Type="Bool">true</Property>
 			</Item>
-			<Item Name="WPI_ADI_IMU_KalmanPitchRollYaw.vi" Type="VI" URL="../ADI MXP IMU/WPI_ADI_IMU_KalmanPitchRollYaw.vi"/>
 		</Item>
 		<Item Name="Build Specifications" Type="Build">
 			<Item Name="My Zip File" Type="Zip File">

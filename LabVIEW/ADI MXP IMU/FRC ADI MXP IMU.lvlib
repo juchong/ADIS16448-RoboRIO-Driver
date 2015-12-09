@@ -12,8 +12,13 @@
 			<Item Name="WPI_AnalogDevicesIMUDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUDevRef.ctl"/>
 		</Item>
 		<Item Name="WPI_ADI_IMU_Close.vi" Type="VI" URL="../WPI_ADI_IMU_Close.vi"/>
+		<Item Name="WPI_ADI_IMU_ComplementaryFilter.vi" Type="VI" URL="../WPI_ADI_IMU_ComplementaryFilter.vi"/>
+		<Item Name="WPI_ADI_IMU_Get AHRS.vi" Type="VI" URL="../WPI_ADI_IMU_Get AHRS.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Angles.vi" Type="VI" URL="../WPI_ADI_IMU_Get Angles.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Instant.vi" Type="VI" URL="../WPI_ADI_IMU_Get Instant.vi"/>
+		<Item Name="WPI_ADI_IMU_KalmanFilter.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanFilter.vi"/>
+		<Item Name="WPI_ADI_IMU_KalmanPitchRollCalcs.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanPitchRollCalcs.vi"/>
+		<Item Name="WPI_ADI_IMU_KalmanPitchRollYaw.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanPitchRollYaw.vi"/>
 		<Item Name="WPI_ADI_IMU_Open.vi" Type="VI" URL="../WPI_ADI_IMU_Open.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Get.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Get.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Set.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Set.vi"/>
