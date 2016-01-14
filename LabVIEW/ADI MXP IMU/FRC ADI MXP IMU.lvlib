@@ -10,6 +10,7 @@
 	<Item Name="API" Type="Folder">
 		<Item Name="Typedef" Type="Folder">
 			<Item Name="WPI_AnalogDevicesIMUDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUDevRef.ctl"/>
+			<Item Name="WPI_AnalogDevicesIMUInterruptDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUInterruptDevRef.ctl"/>
 		</Item>
 		<Item Name="WPI_ADI_IMU_Close.vi" Type="VI" URL="../WPI_ADI_IMU_Close.vi"/>
 		<Item Name="WPI_ADI_IMU_ComplementaryFilter.vi" Type="VI" URL="../WPI_ADI_IMU_ComplementaryFilter.vi"/>
@@ -32,6 +33,7 @@
 		<Item Name="WPI_IMU_ADIS16448_ReadRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadRegister.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_ReadSensorData.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadSensorData.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Registers.ctl" Type="VI" URL="../WPI_IMU_ADIS16448_Registers.ctl"/>
+		<Item Name="WPI_IMU_ADIS16448_SPIDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_SPIDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_WriteRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_WriteRegister.vi"/>
 		<Item Name="WPI_IMU_FGV.vi" Type="VI" URL="../WPI_IMU_FGV.vi"/>
 	</Item>
