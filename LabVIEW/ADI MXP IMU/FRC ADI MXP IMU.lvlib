@@ -12,18 +12,17 @@
 			<Item Name="WPI_AnalogDevicesIMUDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUDevRef.ctl"/>
 			<Item Name="WPI_AnalogDevicesIMUInterruptDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUInterruptDevRef.ctl"/>
 		</Item>
+		<Item Name="WPI_ADI_IMU_AHRS_Madgwick.vi" Type="VI" URL="../WPI_ADI_IMU_AHRS_Madgwick.vi"/>
+		<Item Name="WPI_ADI_IMU_AHRS_RoboBees.vi" Type="VI" URL="../WPI_ADI_IMU_AHRS_RoboBees.vi"/>
 		<Item Name="WPI_ADI_IMU_Close.vi" Type="VI" URL="../WPI_ADI_IMU_Close.vi"/>
-		<Item Name="WPI_ADI_IMU_ComplementaryFilter.vi" Type="VI" URL="../WPI_ADI_IMU_ComplementaryFilter.vi"/>
 		<Item Name="WPI_ADI_IMU_Get AHRS.vi" Type="VI" URL="../WPI_ADI_IMU_Get AHRS.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Angles.vi" Type="VI" URL="../WPI_ADI_IMU_Get Angles.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Instant.vi" Type="VI" URL="../WPI_ADI_IMU_Get Instant.vi"/>
-		<Item Name="WPI_ADI_IMU_KalmanFilter.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanFilter.vi"/>
-		<Item Name="WPI_ADI_IMU_KalmanPitchRollCalcs.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanPitchRollCalcs.vi"/>
-		<Item Name="WPI_ADI_IMU_KalmanPitchRollYaw.vi" Type="VI" URL="../WPI_ADI_IMU_KalmanPitchRollYaw.vi"/>
 		<Item Name="WPI_ADI_IMU_Open.vi" Type="VI" URL="../WPI_ADI_IMU_Open.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Get.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Get.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Set.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Set.vi"/>
 		<Item Name="WPI_ADI_IMU_Reset.vi" Type="VI" URL="../WPI_ADI_IMU_Reset.vi"/>
+		<Item Name="WPI_ADI_IMU_Tilt_RoboBees.vi" Type="VI" URL="../WPI_ADI_IMU_Tilt_RoboBees.vi"/>
 		<Item Name="WPI_IMU_Loop.vi" Type="VI" URL="../WPI_IMU_Loop.vi"/>
 	</Item>
 	<Item Name="Private" Type="Folder">

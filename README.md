@@ -25,3 +25,6 @@ After cloning the repository, open the LabVIEW project `FRC ADI MXP IMU.lvproj` 
 ![ADIS16448 IMU Driver Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/FrontPanel.PNG)
 
 Once the LabVIEW code starts, **don't touch the RoboRIO!** The code records sensor data when starting up and uses it to correct for sensor drift. Once data appears in the indicators, the sensor is ready for use! 
+
+### A Shout-Out to the RoboBees
+Thank you very much to Team 836, The RoboBees for providing the FIRST community with an excellent AHRS example! 
