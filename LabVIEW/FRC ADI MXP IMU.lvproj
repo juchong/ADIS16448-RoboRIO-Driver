@@ -7,6 +7,7 @@ This example shows how to use the ADXRS453 Gyro sensor connected to SPI.
 
 This example expects a USB cable connected from your development PC to the Type B USB Jack (next to the power input) on the roboRIO.</Property>
 	<Item Name="My Computer" Type="My Computer">
+		<Property Name="GIT_FILE" Type="Bool">false</Property>
 		<Property Name="NI.SortType" Type="Int">3</Property>
 		<Property Name="server.app.propertiesEnabled" Type="Bool">true</Property>
 		<Property Name="server.control.propertiesEnabled" Type="Bool">true</Property>
@@ -18,7 +19,9 @@ This example expects a USB cable connected from your development PC to the Type 
 		<Property Name="server.vi.propertiesEnabled" Type="Bool">true</Property>
 		<Property Name="specify.custom.address" Type="Bool">false</Property>
 		<Item Name="Dependencies" Type="Dependencies"/>
-		<Item Name="Build Specifications" Type="Build"/>
+		<Item Name="Build Specifications" Type="Build">
+			<Property Name="GIT_FILE" Type="Bool">false</Property>
+		</Item>
 	</Item>
 	<Item Name="NI roboRIO" Type="RT myRIO">
 		<Property Name="alias.name" Type="Str">NI roboRIO</Property>
@@ -26,6 +29,7 @@ This example expects a USB cable connected from your development PC to the Type 
 		<Property Name="CCSymbols" Type="Str">TARGET_TYPE,RT;OS,Linux;CPU,ARM;DeviceCode,76F2;</Property>
 		<Property Name="crio.ControllerPID" Type="Str">76F2</Property>
 		<Property Name="crio.family" Type="Str">ARMLinux</Property>
+		<Property Name="GIT_FILE" Type="Bool">false</Property>
 		<Property Name="host.ResponsivenessCheckEnabled" Type="Bool">true</Property>
 		<Property Name="host.ResponsivenessCheckPingDelay" Type="UInt">5000</Property>
 		<Property Name="host.ResponsivenessCheckPingTimeout" Type="UInt">1000</Property>
@@ -261,6 +265,7 @@ AddOutputFilter chunkFilter
 			</Item>
 		</Item>
 		<Item Name="Build Specifications" Type="Build">
+			<Property Name="GIT_FILE" Type="Bool">false</Property>
 			<Item Name="My Zip File" Type="Zip File">
 				<Property Name="Absolute[0]" Type="Bool">false</Property>
 				<Property Name="BuildName" Type="Str">My Zip File</Property>
@@ -268,6 +273,7 @@ AddOutputFilter chunkFilter
 				<Property Name="DestinationID[0]" Type="Str">{69D926B6-8B56-4D6F-81E5-76C1AC6AC090}</Property>
 				<Property Name="DestinationItemCount" Type="Int">1</Property>
 				<Property Name="DestinationName[0]" Type="Str">Destination Directory</Property>
+				<Property Name="GIT_FILE" Type="Bool">false</Property>
 				<Property Name="IncludedItemCount" Type="Int">1</Property>
 				<Property Name="IncludedItems[0]" Type="Ref">/NI roboRIO</Property>
 				<Property Name="IncludeProject" Type="Bool">true</Property>
