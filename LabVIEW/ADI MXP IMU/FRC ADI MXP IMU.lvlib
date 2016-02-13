@@ -23,6 +23,7 @@
 		<Item Name="WPI_ADI_IMU_RefNum Registry Set.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Set.vi"/>
 		<Item Name="WPI_ADI_IMU_Reset.vi" Type="VI" URL="../WPI_ADI_IMU_Reset.vi"/>
 		<Item Name="WPI_ADI_IMU_Tilt_RoboBees.vi" Type="VI" URL="../WPI_ADI_IMU_Tilt_RoboBees.vi"/>
+		<Item Name="WPI_IMU_IMUReset.vi" Type="VI" URL="../WPI_IMU_IMUReset.vi"/>
 		<Item Name="WPI_IMU_Loop.vi" Type="VI" URL="../WPI_IMU_Loop.vi"/>
 	</Item>
 	<Item Name="Private" Type="Folder">
