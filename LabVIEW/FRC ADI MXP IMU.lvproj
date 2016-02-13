@@ -105,6 +105,7 @@ AddOutputFilter chunkFilter
 		<Property Name="target.webservices.ValidTimestampWindow" Type="Int">15</Property>
 		<Item Name="FRC ADI MXP IMU Example.vi" Type="VI" URL="../FRC ADI MXP IMU Example.vi"/>
 		<Item Name="FRC ADI MXP IMU.lvlib" Type="Library" URL="../ADI MXP IMU/FRC ADI MXP IMU.lvlib"/>
+		<Item Name="WPI_ADI_IMU_RolloverFix.vi" Type="VI" URL="../ADI MXP IMU/WPI_ADI_IMU_RolloverFix.vi"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="Acquire Semaphore.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/semaphor.llb/Acquire Semaphore.vi"/>
