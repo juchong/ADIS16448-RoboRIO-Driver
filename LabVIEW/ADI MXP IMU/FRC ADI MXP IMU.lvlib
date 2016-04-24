@@ -32,6 +32,7 @@
 		<Property Name="NI.LibItem.Scope" Type="Int">2</Property>
 		<Item Name="WPI_ADI_IMU_GetSetRefNum.vi" Type="VI" URL="../WPI_ADI_IMU_GetSetRefNum.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Data-Address to SPI.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Data-Address to SPI.vi"/>
+		<Item Name="WPI_IMU_ADIS16448_HardwareResetDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_HardwareResetDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_ReadRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadRegister.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_ReadSensorData.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadSensorData.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Registers.ctl" Type="VI" URL="../WPI_IMU_ADIS16448_Registers.ctl"/>
