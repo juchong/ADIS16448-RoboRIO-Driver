@@ -12,30 +12,32 @@
 			<Item Name="WPI_AnalogDevicesIMUDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUDevRef.ctl"/>
 			<Item Name="WPI_AnalogDevicesIMUInterruptDevRef.ctl" Type="VI" URL="../WPI_AnalogDevicesIMUInterruptDevRef.ctl"/>
 		</Item>
+		<Item Name="WPI_ADI_IMU_Accumulation_Reset.vi" Type="VI" URL="../WPI_ADI_IMU_Accumulation_Reset.vi"/>
 		<Item Name="WPI_ADI_IMU_AHRS_Madgwick.vi" Type="VI" URL="../WPI_ADI_IMU_AHRS_Madgwick.vi"/>
 		<Item Name="WPI_ADI_IMU_AHRS_RoboBees.vi" Type="VI" URL="../WPI_ADI_IMU_AHRS_RoboBees.vi"/>
 		<Item Name="WPI_ADI_IMU_Close.vi" Type="VI" URL="../WPI_ADI_IMU_Close.vi"/>
 		<Item Name="WPI_ADI_IMU_Get AHRS.vi" Type="VI" URL="../WPI_ADI_IMU_Get AHRS.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Angles.vi" Type="VI" URL="../WPI_ADI_IMU_Get Angles.vi"/>
 		<Item Name="WPI_ADI_IMU_Get Instant.vi" Type="VI" URL="../WPI_ADI_IMU_Get Instant.vi"/>
-		<Item Name="WPI_ADI_IMU_IMUAccumulation.vi" Type="VI" URL="../WPI_ADI_IMU_IMUAccumulation.vi"/>
+		<Item Name="WPI_ADI_IMU_GetSetRefNum.vi" Type="VI" URL="../WPI_ADI_IMU_GetSetRefNum.vi">
+			<Property Name="NI.LibItem.Scope" Type="Int">2</Property>
+		</Item>
 		<Item Name="WPI_ADI_IMU_Open.vi" Type="VI" URL="../WPI_ADI_IMU_Open.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Get.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Get.vi"/>
 		<Item Name="WPI_ADI_IMU_RefNum Registry Set.vi" Type="VI" URL="../WPI_ADI_IMU_RefNum Registry Set.vi"/>
 		<Item Name="WPI_ADI_IMU_Reset.vi" Type="VI" URL="../WPI_ADI_IMU_Reset.vi"/>
 		<Item Name="WPI_ADI_IMU_Tilt_RoboBees.vi" Type="VI" URL="../WPI_ADI_IMU_Tilt_RoboBees.vi"/>
-		<Item Name="WPI_ADI_IMU_ZeroCorrection.vi" Type="VI" URL="../WPI_ADI_IMU_ZeroCorrection.vi"/>
-		<Item Name="WPI_IMU_IMUReset.vi" Type="VI" URL="../WPI_IMU_IMUReset.vi"/>
 		<Item Name="WPI_IMU_Loop.vi" Type="VI" URL="../WPI_IMU_Loop.vi"/>
 	</Item>
 	<Item Name="Private" Type="Folder">
 		<Property Name="NI.LibItem.Scope" Type="Int">2</Property>
-		<Item Name="WPI_ADI_IMU_GetSetRefNum.vi" Type="VI" URL="../WPI_ADI_IMU_GetSetRefNum.vi"/>
+		<Item Name="Typedef" Type="Folder">
+			<Item Name="WPI_IMU_ADIS16448_Registers.ctl" Type="VI" URL="../WPI_IMU_ADIS16448_Registers.ctl"/>
+		</Item>
 		<Item Name="WPI_IMU_ADIS16448_Data-Address to SPI.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Data-Address to SPI.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_HardwareResetDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_HardwareResetDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_ReadRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadRegister.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_ReadSensorData.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ReadSensorData.vi"/>
-		<Item Name="WPI_IMU_ADIS16448_Registers.ctl" Type="VI" URL="../WPI_IMU_ADIS16448_Registers.ctl"/>
 		<Item Name="WPI_IMU_ADIS16448_ResetDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ResetDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_SPIDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_SPIDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_WriteCommand.vi" Type="VI" URL="../WPI_IMU_ADIS16448_WriteCommand.vi"/>
