@@ -18,6 +18,7 @@
 		<Item Name="WPI_IMU_ADIS16448_Get AHRS.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Get AHRS.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Get Angles.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Get Angles.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Get Instant.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Get Instant.vi"/>
+		<Item Name="WPI_IMU_ADIS16448_IMUAccumulation.vi" Type="VI" URL="../WPI_IMU_ADIS16448_IMUAccumulation.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_Loop.vi" Type="VI" URL="../WPI_IMU_ADIS16448_Loop.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_OffsetComp.vi" Type="VI" URL="../WPI_IMU_ADIS16448_OffsetComp.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_OffsetFileName.vi" Type="VI" URL="../WPI_IMU_ADIS16448_OffsetFileName.vi"/>
