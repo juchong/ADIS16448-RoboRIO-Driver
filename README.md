@@ -1,5 +1,5 @@
-# ADIS16448 RoboRIO LabVIEW Example for 2016 FIRST Robotics
-### A working example built for FRC robots using the 2016 LabVIEW development environment
+# ADIS16448 RoboRIO LabVIEW Example for FIRST Robotics
+### A working example built for FRC robots using the FRC LabVIEW development environment
 
 This example library was written to give mentors, students, and engineers a starting point for using a very high-performance 10 Degree-of-Freedom (DoF), calibrated Inertial Measurement Unit (IMU). This sensor packages gyroscopes, accelerometers, magnetometers, and a barometer in a small, robust package perfect for high performance robotics (such as FRC). 
 
