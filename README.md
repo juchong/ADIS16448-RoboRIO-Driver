@@ -22,7 +22,7 @@ Plug in the expansion board as shown below. **Be careful to not offset the conne
 
 After cloning the repository, open the LabVIEW project `FRC ADI MXP IMU.lvproj` and double click on the example VI `FRC ADI MXP IMU Example.vi`. A front panel like the one shown below should appear once everything loads. Check your connection settings in the project and run the program. If integrating the code into a robot project, copy the `LabVIEW` directory into your project and add the folder into the `LabVIEW Project Explorer`.
 
-![ADIS16448 IMU Driver Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/FrontPanel.PNG)
+![ADIS16448 IMU Driver Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/FrontPanel.png)
 
 ### Does the library support gyro drift calibration?
 
