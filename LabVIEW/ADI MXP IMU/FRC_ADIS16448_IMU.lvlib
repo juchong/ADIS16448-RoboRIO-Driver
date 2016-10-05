@@ -41,6 +41,7 @@
 		<Item Name="WPI_IMU_ADIS16448_ResetDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_ResetDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_SPIDelay.vi" Type="VI" URL="../WPI_IMU_ADIS16448_SPIDelay.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_WriteCommand.vi" Type="VI" URL="../WPI_IMU_ADIS16448_WriteCommand.vi"/>
+		<Item Name="WPI_IMU_ADIS16448_WriteReadRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_WriteReadRegister.vi"/>
 		<Item Name="WPI_IMU_ADIS16448_WriteRegister.vi" Type="VI" URL="../WPI_IMU_ADIS16448_WriteRegister.vi"/>
 	</Item>
 </Library>
