@@ -18,7 +18,7 @@ import edu.wpi.first.wpilibj.interfaces.Gyro;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
 import edu.wpi.first.wpilibj.tables.ITable;
-import edu.wpi.first.wpilibj.DigitalSource;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GyroBase;
 import edu.wpi.first.wpilibj.InterruptableSensorBase;
@@ -91,12 +91,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
 
   private SPI m_spi;
   private ByteBuffer m_cmd, m_resp;
-  private static class InterruptSource extends DigitalSource {
-    public InterruptSource(int channel) {
-      initDigitalPort(channel, true);
-    }
-  }
-  private InterruptSource m_interrupt;
+  private DigitalInput m_interrupt;
   private static class ReadTask implements Runnable {
     private ADIS16448_IMU imu;
     public ReadTask(ADIS16448_IMU imu) {
@@ -147,7 +142,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_resp.order(ByteOrder.BIG_ENDIAN);
 
     // Configure interrupt on MXP DIO0
-    m_interrupt = new InterruptSource(10);  // MXP DIO0
+    m_interrupt = new DigitalInput(10);  // MXP DIO0
     m_task = new Thread(new ReadTask(this));
     m_interrupt.requestInterrupts();
     m_interrupt.setUpSourceEdge(false, true);
