@@ -20,14 +20,14 @@
 /**
  * This class is for the ADIS16448 IMU that connects to the RoboRIO MXP port.
  */
-class ADIS16448_IMU : public GyroBase {
+class ADIS16448_IMU : public frc::GyroBase {
  public:
   ADIS16448_IMU();
   ~ADIS16448_IMU();
 
   void Calibrate() override;
   void Reset() override;
-  float GetAngle() const override;
+  double GetAngle() const override;
   double GetRate() const override;
   double GetAngleX() const;
   double GetAngleY() const;
@@ -99,9 +99,9 @@ class ADIS16448_IMU : public GyroBase {
 
   std::atomic_bool m_freed;
 
-  SPI m_spi;
+  frc::SPI m_spi;
   uint8_t m_cmd[26], m_resp[26];
-  std::unique_ptr<DigitalSource> m_interrupt;
+  std::unique_ptr<frc::DigitalSource> m_interrupt;
 
   std::thread m_task;
 

@@ -1,0 +1,47 @@
+import org.gradle.internal.os.OperatingSystem
+
+plugins {
+    id 'net.ltgt.errorprone' version '0.0.8'
+    id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '1.6'
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
+
+if (!hasProperty('releaseType')) {
+    WPILibVersion {
+        releaseType = 'official'
+    }
+}
+
+ext.setupDefines = { project, binaries ->
+    binaries.all {
+        if (project.hasProperty('debug')) {
+            project.setupDebugDefines(cppCompiler, linker)
+        } else {
+            project.setupReleaseDefines(cppCompiler, linker)
+        }
+    }
+}
+
+apply from: "locations.gradle"
+
+apply from: "properties.gradle"
+
+apply from: "dependencies.gradle"
+
+apply from: "cpp.gradle"
+
+apply from: "releases.gradle"
+
+clean {
+    delete buildDir
+    delete releaseDir
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.3'
+}

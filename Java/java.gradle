@@ -1,0 +1,45 @@
+import org.gradle.internal.os.OperatingSystem
+
+apply plugin: 'java'
+apply plugin: 'net.ltgt.errorprone'
+
+repositories {
+    mavenCentral()
+}
+
+configurations.errorprone {
+    resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.0.9'
+}
+
+def generatedJNIHeaderLoc = "${buildDir}/include"
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [javaSrc]
+        }
+    }
+}
+    
+dependencies {
+    compile 'edu.wpi.first.wpilibj:athena:+'
+    runtime 'edu.wpi.first.wpilibj:athena:+'
+    compile 'edu.wpi.first.wpilib.networktables.java:NetworkTables:+:arm'
+    runtime 'edu.wpi.first.wpilib.networktables.java:NetworkTables:+:arm'
+}
+
+jar {
+    description = 'Generates jar'
+    baseName = libraryName
+    duplicatesStrategy = 'exclude'
+
+    dependsOn { classes }
+}
+
+compileJava {
+    options.compilerArgs << '-Xlint:unchecked'
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
