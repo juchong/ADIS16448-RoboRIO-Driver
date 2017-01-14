@@ -14,3 +14,13 @@
 # Metadata
 *.aliases
 *.lvlps
+
+.gradle/
+.vscode/
+arm/
+build/
+release/
+.classpath
+.project
+bin/
+.settings/

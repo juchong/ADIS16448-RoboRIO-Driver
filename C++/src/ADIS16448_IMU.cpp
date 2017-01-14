@@ -8,6 +8,7 @@
 #include "ADIS16448_IMU.h"
 
 #include "LiveWindow/LiveWindow.h"
+#include "DigitalInput.h"
 #include "DriverStation.h"
 #include "ErrorBase.h"
 #include "Timer.h"
@@ -43,27 +44,7 @@ static inline int16_t ToShort(const uint8_t* buf) {
   return (int16_t)(((uint16_t)(buf[0]) << 8) | buf[1]);
 }
 
-namespace {
-class InterruptSource : public DigitalSource {
- public:
-  explicit InterruptSource(uint32_t channel);
-  uint32_t GetChannelForRouting() const override;
-  uint32_t GetModuleForRouting() const override;
-  bool GetAnalogTriggerForRouting() const override;
- private:
-  uint32_t m_channel;
-};
-}  // anonymous namespace
-
-InterruptSource::InterruptSource(uint32_t channel) : m_channel(channel) {
-  int32_t status = 0;
-  allocateDIO(m_digital_ports[channel], true, &status);
-  wpi_setErrorWithContext(status, getHALErrorMessage(status));
-}
-
-uint32_t InterruptSource::GetChannelForRouting() const { return m_channel; }
-uint32_t InterruptSource::GetModuleForRouting() const { return 0; }
-bool InterruptSource::GetAnalogTriggerForRouting() const { return false; }
+using namespace frc;
 
 /**
  * Constructor.
@@ -96,7 +77,7 @@ ADIS16448_IMU::ADIS16448_IMU() : m_spi(SPI::Port::kMXP) {
   m_cmd[1] = 0;
 
   // Configure interrupt on MXP DIO0
-  m_interrupt.reset(new InterruptSource(10));
+  m_interrupt.reset(new DigitalInput(10));
   m_interrupt->RequestInterrupts();
   m_interrupt->SetUpSourceEdge(false, true);
 
@@ -406,7 +387,7 @@ void ADIS16448_IMU::Calculate() {
 /**
  * {@inheritDoc}
  */
-float ADIS16448_IMU::GetAngle() const {
+double ADIS16448_IMU::GetAngle() const {
   return GetYaw();
 }
 

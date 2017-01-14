@@ -1,0 +1,124 @@
+task javaSourceJar(type: Jar) {
+    description = 'Generates the source jar for java'
+    group = 'WPILib'
+    baseName = libraryName
+    classifier = "sources"
+    duplicatesStrategy = 'exclude'
+    destinationDir = releaseDir
+    
+    dependsOn classes
+    from sourceSets.main.allJava
+}
+
+task javaJavadocJar(type: Jar) {
+    description = 'Generates the javadoc jar for java'
+    group = 'WPILib'
+    baseName = libraryName
+    classifier = "javadoc"
+    duplicatesStrategy = 'exclude'
+    destinationDir = releaseDir
+    
+    dependsOn javadoc
+    from javadoc.destinationDir
+}
+
+task userStaticZip(type: Zip) {
+    description = 'Creates user zip of libraries, with static c++ libs.'
+    group = 'WPILib'
+    destinationDir = releaseDir
+    baseName = libraryName
+    classifier = 'user'
+    duplicatesStrategy = 'exclude'
+    
+    // Copy include files from cpp project
+    from(file(cppInclude)) {
+        include '**/*.h'
+        into '/cpp/include'
+    }
+
+    // Copy static binaries from cpp project
+    model {
+        binaries {
+            withType(StaticLibraryBinarySpec) { binary ->
+                from(binary.staticLibraryFile) {
+                    include '*.a'
+                    into '/cpp/lib'
+                }
+            }
+        }
+    }
+
+    dependsOn jar
+    // Copy project java binary
+    from (file(jar.archivePath)) {
+        into '/java/lib'
+    }
+
+    // Include java sources if set
+    if (includeJavaSources) {
+      dependsOn javaSourceJar
+        from (file(javaSourceJar.archivePath)) {
+            into '/java/src'
+        }
+    }
+    
+    // Include java javadoc if set
+    if (includeJavaJavadoc) {
+        dependsOn javaJavadocJar
+        from (file(javaJavadocJar.archivePath)) {
+            into '/java/src'
+        }
+    }
+
+    // Copy Java example
+    from ("${rootDir}/Java/example") {
+        into "/java/src/${libraryName}/example"
+    }
+
+    // Copy C++ example
+    from ("${rootDir}/C++/example") {
+        into "/cpp/src/${libraryName}/example"
+    }
+    
+    // Include cpp sources if set
+    if (includeCppSources) {
+        from(file(cppSrc)) {
+            include '**/*.cpp'
+            include '**/*.h'
+            into "/cpp/src/$libraryName"
+        }
+    }
+}
+
+task cppSources(type: Zip) {
+    description = 'Creates a zip of cpp sources.'
+    group = 'WPILib'
+    destinationDir = releaseDir
+    baseName = libraryName
+    classifier = 'cppsources'
+    duplicatesStrategy = 'exclude'
+    
+    from(cppSrc) {
+        into 'src'
+    }
+
+    from(cppInclude) {
+        into 'include'
+    }
+
+    from ("${rootDir}/C++/example") {
+        into 'example'
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    def name = task.name.toLowerCase()
+    if (name.contains("sharedlibrary") || name.contains("staticlibrary")) {
+        userStaticZip.dependsOn task
+    }
+}
+
+build.dependsOn javaSourceJar
+build.dependsOn javaJavadocJar
+build.dependsOn userStaticZip
+build.dependsOn cppSources
