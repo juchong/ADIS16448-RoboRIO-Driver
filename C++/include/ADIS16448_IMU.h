@@ -11,10 +11,14 @@
 #include "GyroBase.h"
 #include "InterruptableSensorBase.h"
 #include "SPI.h"
+#include "HAL/cpp/priority_condition_variable.h"
 #include "HAL/cpp/priority_mutex.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <thread>
 
 /**
@@ -22,7 +26,10 @@
  */
 class ADIS16448_IMU : public frc::GyroBase {
  public:
-  ADIS16448_IMU();
+  enum AHRSAlgorithm { kComplementary, kMadgwick };
+  enum Axis { kX, kY, kZ };
+
+  ADIS16448_IMU(Axis yaw_axis = kZ, AHRSAlgorithm algorithm = kComplementary);
   ~ADIS16448_IMU();
 
   void Calibrate() override;
@@ -51,18 +58,52 @@ class ADIS16448_IMU : public frc::GyroBase {
   double GetQuaternionX() const;
   double GetQuaternionY() const;
   double GetQuaternionZ() const;
+  void SetTiltCompYaw(bool enabled);
 
   void UpdateTable();
 
  private:
+  // Sample from the IMU
+  struct Sample {
+    double gyro_x;
+    double gyro_y;
+    double gyro_z;
+    double accel_x;
+    double accel_y;
+    double accel_z;
+    double mag_x;
+    double mag_y;
+    double mag_z;
+    double baro;
+    double temp;
+    double dt;
+
+    // Swap axis as appropriate for yaw axis selection
+    void AdjustYawAxis(Axis yaw_axis);
+  };
+
   uint16_t ReadRegister(uint8_t reg);
   void WriteRegister(uint8_t reg, uint16_t val);
+  void Acquire();
   void Calculate();
+  void CalculateMadgwick(Sample& sample, double beta);
+  void CalculateComplementary(Sample& sample);
 
-  // gyro center
-  double m_gyro_center_x = 0.0;
-  double m_gyro_center_y = 0.0;
-  double m_gyro_center_z = 0.0;
+  // AHRS algorithm
+  AHRSAlgorithm m_algorithm;
+
+  // AHRS yaw axis
+  Axis m_yaw_axis;
+
+  // serial number and lot id
+  //int m_serial_num;
+  //int m_lot_id1;
+  //int m_lot_id2;
+
+  // gyro offset
+  double m_gyro_offset_x = 0.0;
+  double m_gyro_offset_y = 0.0;
+  double m_gyro_offset_z = 0.0;
 
   // last read values (post-scaling)
   double m_gyro_x = 0.0;
@@ -93,6 +134,16 @@ class ADIS16448_IMU : public frc::GyroBase {
 
   // Kalman (AHRS)
   double m_ahrs_q1 = 1, m_ahrs_q2 = 0, m_ahrs_q3 = 0, m_ahrs_q4 = 0;
+
+  // Complementary AHRS
+  bool m_first = true;
+  double m_gyro_x_prev;
+  double m_gyro_y_prev;
+  double m_gyro_z_prev;
+  double m_mag_angle_prev = 0.0;
+  bool m_tilt_comp_yaw = true;
+
+  // AHRS outputs
   double m_yaw = 0.0;
   double m_roll = 0.0;
   double m_pitch = 0.0;
@@ -100,10 +151,23 @@ class ADIS16448_IMU : public frc::GyroBase {
   std::atomic_bool m_freed;
 
   frc::SPI m_spi;
-  uint8_t m_cmd[26], m_resp[26];
+  std::unique_ptr<frc::DigitalOutput> m_reset;
   std::unique_ptr<frc::DigitalSource> m_interrupt;
 
-  std::thread m_task;
+  std::thread m_acquire_task;
+  std::thread m_calculate_task;
 
   mutable priority_mutex m_mutex;
+
+  // Samples FIFO.  We make the FIFO 2 longer than it needs
+  // to be so the input and output never overlap (we hold a reference
+  // to the output while the lock is released).
+  static constexpr int kSamplesDepth = 10;
+  Sample m_samples[kSamplesDepth + 2];
+  priority_mutex m_samples_mutex;
+  priority_condition_variable m_samples_not_empty;
+  int m_samples_count = 0;
+  int m_samples_take_index = 0;
+  int m_samples_put_index = 0;
+  bool m_calculate_started = false;
 };
