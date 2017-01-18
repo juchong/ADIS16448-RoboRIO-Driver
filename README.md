@@ -10,7 +10,7 @@ This software example offers:
 
 Tutorial videos, how-to guides, and additional resources can be found at [http://www.analog.com/first](http://www.analog.com/first/)
 
-**UPDATE 01/18/2017: Instruction on integrating the IMU driver into LabVIEW can be found [here](https://ez.analog.com/blogs/engineeringmind/2017/01/18/using-the-adis16448-imu-in-frc-labview).**
+**UPDATE 01/18/2017: Instructions for integrating the IMU driver into LabVIEW can be found [here](https://ez.analog.com/blogs/engineeringmind/2017/01/18/using-the-adis16448-imu-in-frc-labview).**
 
 ### What do I need to get started?
 
