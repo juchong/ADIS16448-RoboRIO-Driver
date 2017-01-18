@@ -8,7 +8,7 @@
 
 </Property>
 	<Item Name="Private" Type="Folder">
-		<Property Name="NI.LibItem.Scope" Type="Int">2</Property>
+		<Property Name="NI.LibItem.Scope" Type="Int">1</Property>
 		<Item Name="ADI_IMU_ADIS16448_AHRS_Madgwick.vi" Type="VI" URL="../ADI_IMU_ADIS16448_AHRS_Madgwick.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_AHRS_RoboBees.vi" Type="VI" URL="../ADI_IMU_ADIS16448_AHRS_RoboBees.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_Data-Address to SPI.vi" Type="VI" URL="../ADI_IMU_ADIS16448_Data-Address to SPI.vi"/>

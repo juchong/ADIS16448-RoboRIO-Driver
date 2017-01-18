@@ -263,12 +263,6 @@ AddOutputFilter chunkFilter
 				<Item Name="WPI_UtilitiesFRC FPGATime.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesFRC FPGATime.vi"/>
 				<Item Name="WPI_UtilitiesTimebaseConstants.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesTimebaseConstants.vi"/>
 			</Item>
-			<Item Name="ADI_IMU_ADIS16448_Close.vi" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_Close.vi"/>
-			<Item Name="ADI_IMU_ADIS16448_Open.vi" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_Open.vi"/>
-			<Item Name="ADI_IMU_ADIS16448_ReadRegister.vi" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_ReadRegister.vi"/>
-			<Item Name="ADI_IMU_ADIS16448_Registers.ctl" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_Registers.ctl"/>
-			<Item Name="ADI_IMU_ADIS16448_SPIDelay.vi" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_SPIDelay.vi"/>
-			<Item Name="ADI_IMU_ADIS16448_WriteRegister.vi" Type="VI" URL="../ADI MXP IMU/ADI_IMU_ADIS16448_WriteRegister.vi"/>
 			<Item Name="FRC_NetworkCommunication.dll" Type="Document" URL="FRC_NetworkCommunication.dll">
 				<Property Name="NI.PreserveRelativePath" Type="Bool">true</Property>
 			</Item>
