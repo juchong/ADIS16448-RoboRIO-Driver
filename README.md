@@ -10,9 +10,11 @@ This software example offers:
 
 Tutorial videos, how-to guides, and additional resources can be found at [http://www.analog.com/first](http://www.analog.com/first/)
 
+**UPDATE 01/18/2017: Instruction on integrating the IMU driver into LabVIEW can be found [here](https://ez.analog.com/blogs/engineeringmind/2017/01/18/using-the-adis16448-imu-in-frc-labview).**
+
 ### What do I need to get started?
 
-In order to use the software, you will need access to a RoboRIO and the ADIS16448 MXP Breakout Board. This software is based on the FRC 2016 LabVIEW software distribution, so previous versions may not work without correcting errors. 
+In order to use the software, you will need access to a RoboRIO and the ADIS16448 MXP Breakout Board. This software is based on the FRC 2017 LabVIEW software distribution, so previous versions may not work without correcting errors. 
 
 Plug in the expansion board as shown below. **Be careful to not offset the connector!!** If installed correctly, the Power LED should turn on once power is applied to the RoboRIO.
 
@@ -20,17 +22,17 @@ Plug in the expansion board as shown below. **Be careful to not offset the conne
 
 ### How do I install the library?
 
-After cloning the repository, open the LabVIEW project `FRC ADI MXP IMU.lvproj` and double click on the example VI `FRC ADI MXP IMU Example.vi`. A front panel like the one shown below should appear once everything loads. Check your connection settings in the project and run the program. If integrating the code into a robot project, copy the `LabVIEW` directory into your project and add the folder into the `LabVIEW Project Explorer`.
+After cloning the repository, open the LabVIEW project `FRC ADI MXP IMU.lvproj` and double click on the example VI `FRC ADI MXP IMU Example.vi`. A front panel like the one shown below should appear once everything loads. Check your connection settings in the project and run the program. Instructions for integrating the IMU driver into LabVIEW can be found [here](https://ez.analog.com/blogs/engineeringmind/2017/01/18/using-the-adis16448-imu-in-frc-labview).
 
 ![ADIS16448 IMU Driver Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/FrontPanel.png)
 
 ### Does the library support gyro drift calibration?
 
-YES! The library now includes a calibration program! Open  `ADIS16448 IMU Calibration.vi` and follow the instructions on the GUI. Once the calibration program finishes, a calibration file will be stored in your RoboRIO's internal memory. If you would like to remove the calibration, navigate to your RoboRIO's web configuration page and use the file manager to delete the calibration file. The file will be stored in `/c/UNIQUE_FILE_NAME`. Note that running the calibration program more than once will overwrite the previous file.
+YES! The library now includes a calibration program! Open  `ADIS16448 IMU Calibration.vi` and follow the instructions on the GUI. Once the calibration program finishes, the calibration data will be stored in registers within the IMU. This compensation will be automatically applied to the sensor outputs during normal operation. If you would like to remove the calibration, select the "Clear Calibration" control and run the software. Note that running the calibration program more than once will overwrite the previous file.
+
+If calibration data does not exist, the IMU will sample 3 seconds worth of data upon start-up and use this data to compensate for drift.
 
 ![ADIS16448 IMU Calibration Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/Calibrate.PNG)
-
-If the calibration file exists, the driver will automatically detect it and begin utilizing the data. If calibration has not been performed, the driver will sample 3 seconds worth of drift compensation data.
 
 ### A Shout-Out to the RoboBees
 Thank you very much to Team 836, The RoboBees for providing the FIRST community with an excellent AHRS example! 
