@@ -127,7 +127,7 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
   m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
   m_calculate_task = std::thread(&ADIS16448_IMU::Calculate, this);
 
-  if (ReadRegister(kRegXGYRO_OFF)) Calibrate();
+  if (ReadRegister(kRegXGYRO_OFF) == 0) Calibrate();
 
   //HALReport(HALUsageReporting::kResourceType_ADIS16448, 0);
   LiveWindow::GetInstance()->AddSensor("ADIS16448_IMU", 0, this);
