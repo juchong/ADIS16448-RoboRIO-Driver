@@ -251,13 +251,13 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     }
 
     // Set IMU internal decimation to 204.8 SPS
-    writeRegister(kRegSMPL_PRD, 201);
+    writeRegister(kRegSMPL_PRD, 0x0201);
 
     // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
-    writeRegister(kRegMSC_CTRL, 0x44);
+    writeRegister(kRegMSC_CTRL, 0x0044);
 
     // Configure IMU internal Bartlett filter
-    writeRegister(kRegSENS_AVG, 400);
+    writeRegister(kRegSENS_AVG, 0x0400);
 
     // Read serial number and lot ID
     //m_serial_num = readRegister(kRegSERIAL_NUM);

@@ -104,13 +104,13 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
   }
 
   // Set IMU internal decimation to 204.8 SPS
-  WriteRegister(kRegSMPL_PRD, 201);
+  WriteRegister(kRegSMPL_PRD, 0x0201);
 
   // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
-  WriteRegister(kRegMSC_CTRL, 0x44);
+  WriteRegister(kRegMSC_CTRL, 0x0044);
 
   // Configure IMU internal Bartlett filter
-  WriteRegister(kRegSENS_AVG, 400);
+  WriteRegister(kRegSENS_AVG, 0x0400);
 
   // Read serial number and lot ID
   //m_serial_num = ReadRegister(kRegSERIAL_NUM);
@@ -127,7 +127,7 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
   m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
   m_calculate_task = std::thread(&ADIS16448_IMU::Calculate, this);
 
-  Calibrate();
+  if (ReadRegister(kRegXGYRO_OFF) == 0) Calibrate();
 
   //HALReport(HALUsageReporting::kResourceType_ADIS16448, 0);
   LiveWindow::GetInstance()->AddSensor("ADIS16448_IMU", 0, this);
