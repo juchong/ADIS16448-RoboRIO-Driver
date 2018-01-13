@@ -1,8 +1,8 @@
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    id 'net.ltgt.errorprone' version '0.0.8'
-    id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '1.6'
+    id 'net.ltgt.errorprone' version '0.0.10'
+    id 'edu.wpi.first.wpilib.versioning.WPILibVersioningPlugin' version '2.0'
 }
 
 allprojects {
@@ -43,5 +43,5 @@ clean {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.3'
+    gradleVersion = '4.4'
 }
