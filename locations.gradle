@@ -1,9 +1,0 @@
-// Include and src directories for building the wpilibc library
-ext.cppInclude = "${rootDir}/C++/include"
-ext.cppSrc = "${rootDir}/C++/src"
-
-// Locations for Java and JNI source files
-ext.javaSrc = "${rootDir}/Java/src"
-
-// Folder to put release zips into
-ext.releaseDir = file("${rootDir}/release")
