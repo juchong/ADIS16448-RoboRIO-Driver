@@ -33,7 +33,6 @@
 		<Item Name="ADI_IMU_ADIS16448_Get Angles.vi" Type="VI" URL="../ADI_IMU_ADIS16448_Get Angles.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_Get Instant.vi" Type="VI" URL="../ADI_IMU_ADIS16448_Get Instant.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_IMUDevRef.ctl" Type="VI" URL="../ADI_IMU_ADIS16448_IMUDevRef.ctl"/>
-		<Item Name="ADI_IMU_ADIS16448_InterruptDevRef.ctl" Type="VI" URL="../ADI_IMU_ADIS16448_InterruptDevRef.ctl"/>
 		<Item Name="ADI_IMU_ADIS16448_Loop.vi" Type="VI" URL="../ADI_IMU_ADIS16448_Loop.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_Open.vi" Type="VI" URL="../ADI_IMU_ADIS16448_Open.vi"/>
 		<Item Name="ADI_IMU_ADIS16448_RefNum Registry Get.vi" Type="VI" URL="../ADI_IMU_ADIS16448_RefNum Registry Get.vi"/>
