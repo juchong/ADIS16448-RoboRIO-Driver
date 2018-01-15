@@ -6,10 +6,10 @@
 /*----------------------------------------------------------------------------*/
 
 #include <Drive/DifferentialDrive.h>
+#include <ADIS16448_IMU.h>
 #include <IterativeRobot.h>
 #include <Joystick.h>
 #include <Spark.h>
-#include <ADIS16448_IMU.h>
 #include "WPILib.h"
 
 /**

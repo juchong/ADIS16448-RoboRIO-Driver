@@ -5,19 +5,59 @@
 /* the project.                                                               */
 /*----------------------------------------------------------------------------*/
 
-#include "ADIS16448_IMU.h"
+#include <string>
+#include <iostream>
 
 #include <cmath>
+#include <vector>
 
 #include <DigitalInput.h>
+#include <DigitalSource.h>
 #include <DriverStation.h>
 #include <ErrorBase.h>
+#include <ADIS16448_IMU.h>
 #include <SmartDashboard/SendableBuilder.h>
 #include <Timer.h>
 #include <WPIErrors.h>
 
-static constexpr double kTimeout = 0.1;
-static constexpr double kCalibrationSampleTime = 5.0;
+// CRC-16 Look-Up Table
+const uint16_t adiscrc[256] = {
+0x0000, 0x17CE, 0x0FDF, 0x1811, 0x1FBE, 0x0870, 0x1061, 0x07AF,
+0x1F3F, 0x08F1, 0x10E0, 0x072E, 0x0081, 0x174F, 0x0F5E, 0x1890,
+0x1E3D, 0x09F3, 0x11E2, 0x062C, 0x0183, 0x164D, 0x0E5C, 0x1992,
+0x0102, 0x16CC, 0x0EDD, 0x1913, 0x1EBC, 0x0972, 0x1163, 0x06AD,
+0x1C39, 0x0BF7, 0x13E6, 0x0428, 0x0387, 0x1449, 0x0C58, 0x1B96,
+0x0306, 0x14C8, 0x0CD9, 0x1B17, 0x1CB8, 0x0B76, 0x1367, 0x04A9,
+0x0204, 0x15CA, 0x0DDB, 0x1A15, 0x1DBA, 0x0A74, 0x1265, 0x05AB,
+0x1D3B, 0x0AF5, 0x12E4, 0x052A, 0x0285, 0x154B, 0x0D5A, 0x1A94,
+0x1831, 0x0FFF, 0x17EE, 0x0020, 0x078F, 0x1041, 0x0850, 0x1F9E,
+0x070E, 0x10C0, 0x08D1, 0x1F1F, 0x18B0, 0x0F7E, 0x176F, 0x00A1,
+0x060C, 0x11C2, 0x09D3, 0x1E1D, 0x19B2, 0x0E7C, 0x166D, 0x01A3,
+0x1933, 0x0EFD, 0x16EC, 0x0122, 0x068D, 0x1143, 0x0952, 0x1E9C,
+0x0408, 0x13C6, 0x0BD7, 0x1C19, 0x1BB6, 0x0C78, 0x1469, 0x03A7,
+0x1B37, 0x0CF9, 0x14E8, 0x0326, 0x0489, 0x1347, 0x0B56, 0x1C98,
+0x1A35, 0x0DFB, 0x15EA, 0x0224, 0x058B, 0x1245, 0x0A54, 0x1D9A,
+0x050A, 0x12C4, 0x0AD5, 0x1D1B, 0x1AB4, 0x0D7A, 0x156B, 0x02A5,
+0x1021, 0x07EF, 0x1FFE, 0x0830, 0x0F9F, 0x1851, 0x0040, 0x178E,
+0x0F1E, 0x18D0, 0x00C1, 0x170F, 0x10A0, 0x076E, 0x1F7F, 0x08B1,
+0x0E1C, 0x19D2, 0x01C3, 0x160D, 0x11A2, 0x066C, 0x1E7D, 0x09B3,
+0x1123, 0x06ED, 0x1EFC, 0x0932, 0x0E9D, 0x1953, 0x0142, 0x168C,
+0x0C18, 0x1BD6, 0x03C7, 0x1409, 0x13A6, 0x0468, 0x1C79, 0x0BB7,
+0x1327, 0x04E9, 0x1CF8, 0x0B36, 0x0C99, 0x1B57, 0x0346, 0x1488,
+0x1225, 0x05EB, 0x1DFA, 0x0A34, 0x0D9B, 0x1A55, 0x0244, 0x158A,
+0x0D1A, 0x1AD4, 0x02C5, 0x150B, 0x12A4, 0x056A, 0x1D7B, 0x0AB5,
+0x0810, 0x1FDE, 0x07CF, 0x1001, 0x17AE, 0x0060, 0x1871, 0x0FBF,
+0x172F, 0x00E1, 0x18F0, 0x0F3E, 0x0891, 0x1F5F, 0x074E, 0x1080,
+0x162D, 0x01E3, 0x19F2, 0x0E3C, 0x0993, 0x1E5D, 0x064C, 0x1182,
+0x0912, 0x1EDC, 0x06CD, 0x1103, 0x16AC, 0x0162, 0x1973, 0x0EBD,
+0x1429, 0x03E7, 0x1BF6, 0x0C38, 0x0B97, 0x1C59, 0x0448, 0x1386,
+0x0B16, 0x1CD8, 0x04C9, 0x1307, 0x14A8, 0x0366, 0x1B77, 0x0CB9,
+0x0A14, 0x1DDA, 0x05CB, 0x1205, 0x15AA, 0x0264, 0x1A75, 0x0DBB,
+0x152B, 0x02E5, 0x1AF4, 0x0D3A, 0x0A95, 0x1D5B, 0x054A, 0x1284
+};
+
+//static constexpr double kTimeout = 0.1;
+static constexpr double kCalibrationSampleTime = 3.0; // Calibration time in seconds
 static constexpr double kDegreePerSecondPerLSB = 1.0/25.0;
 static constexpr double kGPerLSB = 1.0/1200.0;
 static constexpr double kMilligaussPerLSB = 1.0/7.0;
@@ -35,7 +75,7 @@ static constexpr uint8_t kRegPROD_ID = 0x56;
 //static constexpr uint8_t kRegSERIAL_NUM = 0x58;
 //static constexpr uint8_t kRegZGYRO_OFF = 0x1E;
 //static constexpr uint8_t kRegYGYRO_OFF = 0x1C;
-static constexpr uint8_t kRegXGYRO_OFF = 0x1A;
+//static constexpr uint8_t kRegXGYRO_OFF = 0x1A;
 
 static constexpr double kGyroScale = 0.0174533;   // rad/sec
 static constexpr double kAccelScale = 9.80665;    // mg/sec/sec
@@ -98,18 +138,18 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
 
   // Validate the product ID
   if (ReadRegister(kRegPROD_ID) != 16448) {
-    DriverStation::ReportError("could not find ADIS16448");
+    DriverStation::ReportError("Could not find ADIS16448!");
     return;
   }
 
-  // Set IMU internal decimation to 204.8 SPS
-  WriteRegister(kRegSMPL_PRD, 0x0201);
+  // Set IMU internal decimation to 102.4 SPS
+  WriteRegister(kRegSMPL_PRD, 0x0301);
 
   // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
-  WriteRegister(kRegMSC_CTRL, 0x0044);
+  WriteRegister(kRegMSC_CTRL, 0x0056);
 
   // Configure IMU internal Bartlett filter
-  WriteRegister(kRegSENS_AVG, 0x0400);
+  WriteRegister(kRegSENS_AVG, 0x0402);
 
   // Read serial number and lot ID
   //m_serial_num = ReadRegister(kRegSERIAL_NUM);
@@ -117,16 +157,21 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
   //m_lot_id1 = ReadRegister(kRegLOT_ID1);
 
   // Configure interrupt on MXP DIO0
-  m_interrupt.reset(new DigitalInput(10));
-  m_interrupt->RequestInterrupts();
-  m_interrupt->SetUpSourceEdge(false, true);
+  DigitalInput *dio = new DigitalInput(10);
+
+  // Configure SPI bus for DMA read
+  m_spi.InitAuto(0);
+  m_spi.SetAutoTransmitData(kGLOB_CMD,27);
+  m_spi.StartAutoTrigger(*dio,true,false);
 
   // Start monitoring thread
   m_freed = false;
   m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
   m_calculate_task = std::thread(&ADIS16448_IMU::Calculate, this);
 
-  if (ReadRegister(kRegXGYRO_OFF) == 0) Calibrate();
+  // Execute offset calibration on start-up
+  Calibrate();
+
 
   //HALReport(HALUsageReporting::kResourceType_ADIS16448, 0);
 }
@@ -197,90 +242,119 @@ ADIS16448_IMU::~ADIS16448_IMU() {
 }
 
 void ADIS16448_IMU::Acquire() {
-  uint8_t cmd[26], resp[26];
-  cmd[0] = kGLOB_CMD;
-  cmd[1] = 0;
+  uint8_t buffer[2400];
+  double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
+  int data_count = 0;
+  int array_offset = 0;
+  uint16_t imu_crc = 0;
+  double dt = 0.009765625; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
+  uint8_t data_subset[28];
 
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_last_sample_time = Timer::GetFPGATimestamp();
-  }
   while (!m_freed) {
-    if (m_interrupt->WaitForInterrupt(kTimeout) ==
-        InterruptableSensorBase::WaitResult::kTimeout)
-      continue;
 
-    double sample_time = m_interrupt->ReadFallingTimestamp();
-    double dt;
-    {
-      std::lock_guard<wpi::mutex> sync(m_mutex);
-      dt = sample_time - m_last_sample_time;
-      m_last_sample_time = sample_time;
-    }
+	  // Waiting for the buffer to fill...
+	  Wait(.020); // A delay less than 10ms could potentially overflow the local buffer
 
-    m_spi.Transaction(cmd, resp, 26);
+	  data_count = m_spi.ReadAutoReceivedData(buffer,0,0); // Read number of bytes currently stored in the buffer
+	  array_offset = data_count % 28; // Look for "extra" data
+	  data_count = data_count - array_offset; // Discard "extra" data
+	  m_spi.ReadAutoReceivedData(buffer,data_count,0); // Read data from DMA buffer
 
-    double gyro_x = ToShort(&resp[4]) * kDegreePerSecondPerLSB;
-    double gyro_y = ToShort(&resp[6]) * kDegreePerSecondPerLSB;
-    double gyro_z = ToShort(&resp[8]) * kDegreePerSecondPerLSB;
-    double accel_x = ToShort(&resp[10]) * kGPerLSB;
-    double accel_y = ToShort(&resp[12]) * kGPerLSB;
-    double accel_z = ToShort(&resp[14]) * kGPerLSB;
-    double mag_x = ToShort(&resp[16]) * kMilligaussPerLSB;
-    double mag_y = ToShort(&resp[18]) * kMilligaussPerLSB;
-    double mag_z = ToShort(&resp[20]) * kMilligaussPerLSB;
-    double baro = ToUShort(&resp[22]) * kMillibarPerLSB;
-    double temp = ToShort(&resp[24]) * kDegCPerLSB + kDegCOffset;
+	  for(int i = 0; i < data_count; i += 28) // Process each set of 28 bytes
+	  {
+		  for(int j = 0; j < 28; j++) // Split each set of 28 bytes into a sub-array for processing
+		  {
+			  data_subset[j] = buffer[i + j];
+		  }
 
-    {
-      std::lock_guard<wpi::mutex> sync(m_samples_mutex);
-      // If the FIFO is full, just drop it
-      if (m_calculate_started && m_samples_count < kSamplesDepth) {
-        Sample& sample = m_samples[m_samples_put_index];
-        sample.gyro_x = gyro_x;
-        sample.gyro_y = gyro_y;
-        sample.gyro_z = gyro_z;
-        sample.accel_x = accel_x;
-        sample.accel_y = accel_y;
-        sample.accel_z = accel_z;
-        sample.mag_x = mag_x;
-        sample.mag_y = mag_y;
-        sample.mag_z = mag_z;
-        sample.baro = baro;
-        sample.temp = temp;
-        sample.dt = dt;
-        ++m_samples_put_index;
-        if (m_samples_put_index == (kSamplesDepth + 2))
-          m_samples_put_index = 0;
-        ++m_samples_count;
-        m_samples_not_empty.notify_all();
-      }
-    }
+		  // DEBUG: Plot Sub-Array Data in Terminal
+		  //std::cout << ToUShort(&data_subset[0]) << "," << ToUShort(&data_subset[2]) << "," << ToUShort(&data_subset[4]) <<
+		  //"," << ToUShort(&data_subset[6]) << "," << ToUShort(&data_subset[8]) << "," << ToUShort(&data_subset[10]) << "," <<
+		  //ToUShort(&data_subset[12]) << "," << ToUShort(&data_subset[14]) << "," << ToUShort(&data_subset[16]) << "," <<
+		  //ToUShort(&data_subset[18]) << "," << ToUShort(&data_subset[20]) << "," << ToUShort(&data_subset[22]) << "," <<
+		  //ToUShort(&data_subset[24]) << "," << ToUShort(&data_subset[26]) << std::endl;
 
-    // Update global state
-    {
-      std::lock_guard<wpi::mutex> sync(m_mutex);
-      m_gyro_x = gyro_x;
-      m_gyro_y = gyro_y;
-      m_gyro_z = gyro_z;
-      m_accel_x = accel_x;
-      m_accel_y = accel_y;
-      m_accel_z = accel_z;
-      m_mag_x = mag_x;
-      m_mag_y = mag_y;
-      m_mag_z = mag_z;
-      m_baro = baro;
-      m_temp = temp;
+		  // Calculate CRC-16 on each data packet
+		  uint16_t calc_crc = 0xFFFF; // Starting word
+		  uint16_t byte = 0;
+		  for(int k = 4; k < 26; k += 2 ) // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
+		  {
+			  byte = data_subset[k+1]; // Process LSB
+			  calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
+			  byte = data_subset[k]; // Process MSB
+			  calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
+		  }
 
-      ++m_accum_count;
-      m_accum_gyro_x += gyro_x;
-      m_accum_gyro_y += gyro_y;
-      m_accum_gyro_z += gyro_z;
+		  calc_crc = ~calc_crc; // Complement
+		  calc_crc = (uint16_t)((calc_crc << 8) | (calc_crc >> 8)); // Flip LSB & MSB
+		  imu_crc = ToUShort(&buffer[i + 26]); // Extract DUT CRC from data
 
-      m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
-      m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
-      m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
-    }
+		  // Compare calculated vs read CRC. Don't update outputs if CRC-16 is bad
+		  if(calc_crc == imu_crc)
+		  {
+			  gyro_x = ToShort(&data_subset[4]) * kDegreePerSecondPerLSB;
+			  gyro_y = ToShort(&data_subset[6]) * kDegreePerSecondPerLSB;
+			  gyro_z = ToShort(&data_subset[8]) * kDegreePerSecondPerLSB;
+			  accel_x = ToShort(&data_subset[10]) * kGPerLSB;
+			  accel_y = ToShort(&data_subset[12]) * kGPerLSB;
+			  accel_z = ToShort(&data_subset[14]) * kGPerLSB;
+			  mag_x = ToShort(&data_subset[16]) * kMilligaussPerLSB;
+			  mag_y = ToShort(&data_subset[18]) * kMilligaussPerLSB;
+			  mag_z = ToShort(&data_subset[20]) * kMilligaussPerLSB;
+			  baro = ToUShort(&data_subset[22]) * kMillibarPerLSB;
+			  temp = ToShort(&data_subset[24]) * kDegCPerLSB + kDegCOffset;
+			{
+			  std::lock_guard<wpi::mutex> sync(m_samples_mutex);
+			  // If the FIFO is full, just drop it
+			  if (m_calculate_started && m_samples_count < kSamplesDepth)
+			  {
+				Sample& sample = m_samples[m_samples_put_index];
+				sample.gyro_x = gyro_x;
+				sample.gyro_y = gyro_y;
+				sample.gyro_z = gyro_z;
+				sample.accel_x = accel_x;
+				sample.accel_y = accel_y;
+				sample.accel_z = accel_z;
+				sample.mag_x = mag_x;
+				sample.mag_y = mag_y;
+				sample.mag_z = mag_z;
+				sample.baro = baro;
+				sample.temp = temp;
+				sample.dt = dt;
+				++m_samples_put_index;
+				if (m_samples_put_index == (kSamplesDepth + 2))
+				  m_samples_put_index = 0;
+				++m_samples_count;
+				m_samples_not_empty.notify_all();
+			  }
+			}
+
+			// Update global state
+			{
+			  std::lock_guard<wpi::mutex> sync(m_mutex);
+			  m_gyro_x = gyro_x;
+			  m_gyro_y = gyro_y;
+			  m_gyro_z = gyro_z;
+			  m_accel_x = accel_x;
+			  m_accel_y = accel_y;
+			  m_accel_z = accel_z;
+			  m_mag_x = mag_x;
+			  m_mag_y = mag_y;
+			  m_mag_z = mag_z;
+			  m_baro = baro;
+			  m_temp = temp;
+
+			  ++m_accum_count;
+			  m_accum_gyro_x += gyro_x;
+			  m_accum_gyro_y += gyro_y;
+			  m_accum_gyro_z += gyro_z;
+
+			  m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
+			  m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
+			  m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
+			}
+		  }
+	  }
   }
 }
 
@@ -838,10 +912,10 @@ double ADIS16448_IMU::GetYaw() const {
   return m_yaw;
 }
 
-double ADIS16448_IMU::GetLastSampleTime() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_last_sample_time;
-}
+//double ADIS16448_IMU::GetLastSampleTime() const {
+//  std::lock_guard<wpi::mutex> sync(m_mutex);
+//  return m_last_sample_time;
+//}
 
 double ADIS16448_IMU::GetBarometricPressure() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
