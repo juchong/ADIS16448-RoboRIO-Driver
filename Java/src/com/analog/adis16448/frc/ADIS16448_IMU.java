@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) FIRST 2016. All Rights Reserved.                             */
+/* Copyright (c) FIRST 2016-2018. All Rights Reserved.                        */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
 /* must be accompanied by the FIRST BSD license file in the root directory of */
 /* the project.                                                               */
@@ -17,10 +17,9 @@ import java.util.concurrent.locks.ReentrantLock;
 //import edu.wpi.first.wpilibj.communication.FRCNetworkCommunicationsLibrary.tInstances;
 //import edu.wpi.first.wpilibj.communication.FRCNetworkCommunicationsLibrary.tResourceType;
 //import edu.wpi.first.wpilibj.communication.UsageReporting;
+import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.wpilibj.interfaces.Gyro;
-import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
-import edu.wpi.first.wpilibj.tables.ITable;
+import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -33,7 +32,7 @@ import edu.wpi.first.wpilibj.Timer;
 /**
  * This class is for the ADIS16448 IMU that connects to the RoboRIO MXP port.
  */
-public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWindowSendable {
+public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource {
   private static final double kTimeout = 0.1;
   private static final double kCalibrationSampleTime = 5.0;
   private static final double kDegreePerSecondPerLSB = 1.0/25.0;
@@ -1082,19 +1081,29 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
    * {@inheritDoc}
    */
   @Override
-  public void updateTable() {
-    ITable table = getTable();
-    if (table != null) {
-      table.putNumber("Value", getAngle());
-      table.putNumber("Pitch", getPitch());
-      table.putNumber("Roll", getRoll());
-      table.putNumber("Yaw", getYaw());
-      table.putNumber("AccelX", getAccelX());
-      table.putNumber("AccelY", getAccelY());
-      table.putNumber("AccelZ", getAccelZ());
-      table.putNumber("AngleX", getAngleX());
-      table.putNumber("AngleY", getAngleY());
-      table.putNumber("AngleZ", getAngleZ());
-    }
+  public void initSendable(SendableBuilder builder) {
+    builder.setSmartDashboardType("ADIS16448 IMU");
+    NetworkTableEntry entryValue = builder.getEntry("Value");
+    NetworkTableEntry entryPitch = builder.getEntry("Pitch");
+    NetworkTableEntry entryRoll = builder.getEntry("Roll");
+    NetworkTableEntry entryYaw = builder.getEntry("Yaw");
+    NetworkTableEntry entryAccelX = builder.getEntry("AccelX");
+    NetworkTableEntry entryAccelY = builder.getEntry("AccelY");
+    NetworkTableEntry entryAccelZ = builder.getEntry("AccelZ");
+    NetworkTableEntry entryAngleX = builder.getEntry("AngleX");
+    NetworkTableEntry entryAngleY = builder.getEntry("AngleY");
+    NetworkTableEntry entryAngleZ = builder.getEntry("AngleZ");
+    builder.setUpdateTable(() -> {
+      entryValue.setDouble(getAngle());
+      entryPitch.setDouble(getPitch());
+      entryRoll.setDouble(getRoll());
+      entryYaw.setDouble(getYaw());
+      entryAccelX.setDouble(getAccelX());
+      entryAccelY.setDouble(getAccelY());
+      entryAccelZ.setDouble(getAccelZ());
+      entryAngleX.setDouble(getAngleX());
+      entryAngleY.setDouble(getAngleY());
+      entryAngleZ.setDouble(getAngleZ());
+    });
   }
 }
