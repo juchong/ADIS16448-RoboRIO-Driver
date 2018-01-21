@@ -248,7 +248,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   private Thread m_calculate_task;
 
   /**
-   * Constructor.
+   * @param yaw_axis Which axis is Yaw
+   * @param algorithm Use {@link #calculateComplementary} or {@link #calculateMadgwick} algorithm
    */
   public ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm) {
     m_yaw_axis = yaw_axis;
