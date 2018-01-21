@@ -19,8 +19,7 @@ import java.util.concurrent.locks.ReentrantLock;
 //import edu.wpi.first.wpilibj.communication.UsageReporting;
 import edu.wpi.first.wpilibj.interfaces.Gyro;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
-import edu.wpi.first.wpilibj.tables.ITable;
+import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -28,12 +27,13 @@ import edu.wpi.first.wpilibj.GyroBase;
 import edu.wpi.first.wpilibj.InterruptableSensorBase;
 import edu.wpi.first.wpilibj.PIDSource;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Sendable;
 import edu.wpi.first.wpilibj.Timer;
 
 /**
  * This class is for the ADIS16448 IMU that connects to the RoboRIO MXP port.
  */
-public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWindowSendable {
+public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable {
   private static final double kTimeout = 0.1;
   private static final double kCalibrationSampleTime = 5.0;
   private static final double kDegreePerSecondPerLSB = 1.0/25.0;
@@ -238,7 +238,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_spi.setChipSelectActiveLow();
 
     readRegister(kRegPROD_ID); // dummy read
-    
+
     // Validate the product ID
     if (readRegister(kRegPROD_ID) != 16448) {
       m_spi.free();
@@ -293,7 +293,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_calculate_task.start();
 
     //UsageReporting.report(tResourceType.kResourceType_ADIS16448, 0);
-    LiveWindow.addSensor("ADIS16448_IMU", 0, this);
+    this.setName("ADIS16448_IMU",0);
+    LiveWindow.add(this);
   }
 
   /*
@@ -558,7 +559,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
       double norm = Math.sqrt(ax * ax + ay * ay + az * az);
       if (norm > 0.3 && !excludeAccel) {
         // normal larger than the sensor noise floor during freefall
-        norm = 1.0 / norm; 
+        norm = 1.0 / norm;
         ax *= norm;
         ay *= norm;
         az *= norm;
@@ -720,7 +721,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // (Pitch, Roll, and Yaw).  This sensor fusion approach effectively
     // combines the individual sensor's best respective properties while
     // mitigating their shortfalls.
-    // 
+    //
     // Design:
     // The Complementary Filter is an algorithm that allows a pair of sensors
     // to contribute differently to a common, composite measurement result.
@@ -729,16 +730,16 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // to maintain the original unit of measurement.  It is computationally
     // inexpensive when compared to alternative estimation techniques such as
     // the Kalman filter.  The algorithm is given by:
-    // 
+    //
     // angle(n) = (alpha)*(angle(n-1) + gyrorate * dt) + (1-alpha)*(accel or mag);
-    // 
-    // where : 
-    // 
+    //
+    // where :
+    //
     // alpha = tau / (tau + dt)
-    // 
+    //
     // This implementation uses the average Gyro rate across the dt period, so
     // above gyrorate = [(gyrorate(n)-gyrorate(n-1)]/2
-    // 
+    //
     // Essentially, for Pitch and Roll, the slow moving (lower frequency) part
     // of the rotation estimate is taken from the Accelerometer - ignoring the
     // high noise level, and the faster moving (higher frequency) part is taken
@@ -752,16 +753,16 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // between the low and high pass filters.  Both tau and the sample time,
     // dt, affect the parameter 'alpha', which sets the balance point for how
     // much of which sensor is 'trusted' to contribute to the rotation estimate.
-    // 
+    //
     // The Complementary Filter algorithm is applied to each X/Y/Z rotation
     // axis to compute R/P/Y outputs, respectively.
-    // 
+    //
     // Magnetometer readings are tilt-compensated when Tilt-Comp-(Yaw) is
     // asserted (True), by the IMU TILT subVI.  This creates what is known as a
     // tilt-compensated compass, which allows Yaw to be insensitive to the
     // effects of a non-level sensor, but generates error in Yaw during
     // movement (coordinate acceleration).
-    // 
+    //
     // The Yaw "South" crossing detector is necessary to allow a smooth
     // transition across the +/- 180 deg discontinuity (inherent in the ATAN
     // function).  Since -180 deg is congruent with +180 deg, Yaw needs to jump
@@ -771,7 +772,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // and evaluates how far it is from the previous reading.  If it is greater
     // than the previous reading by the Discriminant (= 180 deg), then Yaw just
     // crossed South.
-    // 
+    //
     // By choosing 180 as the Discriminant, the only way the detector can
     // produce a false positive, assuming a loop iteration of 70 msec, is for
     // it to rotate >2,571 dps ... (2,571=180/.07).  This is faster than the ST
@@ -782,10 +783,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // crossing occurs.  The Modulus function cannot be used here as the
     // Complementary Filter algorithm has 'state' (needs to remember previous
     // Yaw).
-    // 
+    //
     // We are in effect stitching together two ends of a ruler for 'modular
     // arithmetic' (clock math).
-    // 
+    //
     // Inputs:
     // GYRO - Gyro rate and sample time measurements.
     // ACCEL - Acceleration measurements.
@@ -795,12 +796,12 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // TAU MAG - tau parameter used to set sensor balance between Mag and Gyro
     //           for Yaw.
     // TILT COMP (Yaw) - Enables Yaw tilt-compensation if True.
-    // 
+    //
     // Outputs:
     // ROLL - Filtered Roll about sensor X-axis.
     // PITCH - Filtered Pitch about sensor Y-axis.
     // YAW - Filtered Yaw about sensor Z-axis.
-    // 
+    //
     // Implementation:
     // It's best to establish the optimum loop sample time first.  See IMU READ
     // implementation notes for guidance.  Each tau parameter should then be
@@ -809,22 +810,22 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // each time until the result doesn't drift, but not so far that the result
     // gets noisy.  An optimum tau for this IMU is likely in the range of 1.0
     // to 0.01, for a loop sample time between 10 and 100 ms.
-    // 
+    //
     // Note that both sample timing (dt) and tau both affect the balance
     // parameter, 'alpha'.  Adjusting either dt or tau will require the other
     // to be readjusted to maintain a particular filter performance.
-    // 
+    //
     // It is likely best to set Yaw tilt-compensation to off (False) if the Yaw
     // value is to be used as feedback in a closed loop control application.
     // The tradeoff is that Yaw will only be accurate while the robot is level.
-    // 
+    //
     // Since a Yaw of -180 degrees is congruent with +180 degrees (they
     // represent the same direction), it is possible that the Yaw output will
     // oscillate between these two values when the sensor happens to be
     // pointing due South, as sensor noise causes slight variation.  You will
     // need to account for this possibility if you are using the Yaw value for
     // decision-making in code.
-    // 
+    //
     // ----- The RoboBees FRC Team 836! -----
     // Complement your passion to solve problems with a STEM Education!
 
@@ -859,26 +860,26 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // for derivation of Pitch and Roll equations.  Used eqs 37 & 38 as Rxyz.
     // Eqs 42 & 43, as Ryxz, produce same values within Pitch & Roll
     // constraints.
-    // 
+    //
     // Freescale's Pitch/Roll derivation is preferred over ST's as it does not
     // degrade due to the Sine function linearity assumption.
-    // 
+    //
     // Pitch is accurate over +/- 90 degree range, and Roll is accurate within
     // +/- 180 degree range - as long as accelerometer is only sensing
     // acceleration due to gravity.  Movement (coordinate acceleration) will
     // add error to Pitch and Roll indications.
-    // 
-    // Yaw is not obtainable from an accelerometer due to its geometric 
+    //
+    // Yaw is not obtainable from an accelerometer due to its geometric
     // relationship with the Earth's gravity vector.  (Would have same problem
     // on Mars.)
-    // 
+    //
     // see http://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
     // for derivation of Yaw equation.  Used eq 12 in Appendix A (eq 13 is
     // replaced by ATAN2 function).  Yaw is obtainable from the magnetometer,
     // but is sensitive to any tilt from horizontal.  This uses Pitch and Roll
     // values from above for tilt compensation of Yaw, resulting in a
     // tilt-compensated compass.
-    // 
+    //
     // As with Pitch/Roll, movement (coordinate acceleration) will add error to
     // Yaw indication.
 
@@ -1078,23 +1079,19 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_tilt_comp_yaw = enabled;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void updateTable() {
-    ITable table = getTable();
-    if (table != null) {
-      table.putNumber("Value", getAngle());
-      table.putNumber("Pitch", getPitch());
-      table.putNumber("Roll", getRoll());
-      table.putNumber("Yaw", getYaw());
-      table.putNumber("AccelX", getAccelX());
-      table.putNumber("AccelY", getAccelY());
-      table.putNumber("AccelZ", getAccelZ());
-      table.putNumber("AngleX", getAngleX());
-      table.putNumber("AngleY", getAngleY());
-      table.putNumber("AngleZ", getAngleZ());
-    }
+  public void initSendable(SendableBuilder builder) {
+    builder.setSmartDashboardType("ADIS16448_IMU");
+
+    builder.addDoubleProperty("Value", this::getAngle, null);
+    builder.addDoubleProperty("Pitch", this::getPitch, null);
+    builder.addDoubleProperty("Roll", this::getRoll, null);
+    builder.addDoubleProperty("Yaw", this::getYaw, null);
+    builder.addDoubleProperty("AccelX", this::getAccelX, null);
+    builder.addDoubleProperty("AccelY", this::getAccelY, null);
+    builder.addDoubleProperty("AccelZ", this::getAccelZ, null);
+    builder.addDoubleProperty("AngleX", this::getAngleX, null);
+    builder.addDoubleProperty("AngleY", this::getAngleY, null);
+    builder.addDoubleProperty("AngleZ", this::getAngleZ, null);
   }
 }
