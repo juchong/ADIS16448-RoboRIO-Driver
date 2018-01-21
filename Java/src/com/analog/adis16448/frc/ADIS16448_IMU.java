@@ -7,41 +7,36 @@
 
 package com.analog.adis16448.frc;
 
-import java.nio.ByteOrder;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-//import edu.wpi.first.wpilibj.communication.FRCNetworkCommunicationsLibrary.tInstances;
-//import edu.wpi.first.wpilibj.communication.FRCNetworkCommunicationsLibrary.tResourceType;
-//import edu.wpi.first.wpilibj.communication.UsageReporting;
-import edu.wpi.first.wpilibj.interfaces.Gyro;
-import edu.wpi.first.wpilibj.livewindow.LiveWindow;
-import edu.wpi.first.wpilibj.livewindow.LiveWindowSendable;
-import edu.wpi.first.wpilibj.tables.ITable;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GyroBase;
-import edu.wpi.first.wpilibj.InterruptableSensorBase;
 import edu.wpi.first.wpilibj.PIDSource;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Sendable;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.interfaces.Gyro;
+import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
 
 /**
  * This class is for the ADIS16448 IMU that connects to the RoboRIO MXP port.
  */
-public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWindowSendable {
-  private static final double kTimeout = 0.1;
-  private static final double kCalibrationSampleTime = 5.0;
-  private static final double kDegreePerSecondPerLSB = 1.0/25.0;
-  private static final double kGPerLSB = 1.0/1200.0;
-  private static final double kMilligaussPerLSB = 1.0/7.0;
-  private static final double kMillibarPerLSB = 0.02;
-  private static final double kDegCPerLSB = 0.07386;
-  private static final double kDegCOffset = 31;
+@SuppressWarnings("unused")
+public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable {
+	private static final double kCalibrationSampleTime = 3.0; // Calibration time in seconds
+	private static final double kDegreePerSecondPerLSB = 1.0/25.0;
+	private static final double kGPerLSB = 1.0/1200.0;
+	private static final double kMilligaussPerLSB = 1.0/7.0;
+	private static final double kMillibarPerLSB = 0.02;
+	private static final double kDegCPerLSB = 0.07386;
+	private static final double kDegCOffset = 31;
 
   private static final int kGLOB_CMD = 0x3E;
   private static final int kRegSMPL_PRD = 0x36;
@@ -64,6 +59,42 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
   // AHRS yaw axis
   private Axis m_yaw_axis;
 
+	//CRC-16 Look-Up Table
+	int adiscrc[] = new int[]{
+	0x0000, 0x17CE, 0x0FDF, 0x1811, 0x1FBE, 0x0870, 0x1061, 0x07AF,
+	0x1F3F, 0x08F1, 0x10E0, 0x072E, 0x0081, 0x174F, 0x0F5E, 0x1890,
+	0x1E3D, 0x09F3, 0x11E2, 0x062C, 0x0183, 0x164D, 0x0E5C, 0x1992,
+	0x0102, 0x16CC, 0x0EDD, 0x1913, 0x1EBC, 0x0972, 0x1163, 0x06AD,
+	0x1C39, 0x0BF7, 0x13E6, 0x0428, 0x0387, 0x1449, 0x0C58, 0x1B96,
+	0x0306, 0x14C8, 0x0CD9, 0x1B17, 0x1CB8, 0x0B76, 0x1367, 0x04A9,
+	0x0204, 0x15CA, 0x0DDB, 0x1A15, 0x1DBA, 0x0A74, 0x1265, 0x05AB,
+	0x1D3B, 0x0AF5, 0x12E4, 0x052A, 0x0285, 0x154B, 0x0D5A, 0x1A94,
+	0x1831, 0x0FFF, 0x17EE, 0x0020, 0x078F, 0x1041, 0x0850, 0x1F9E,
+	0x070E, 0x10C0, 0x08D1, 0x1F1F, 0x18B0, 0x0F7E, 0x176F, 0x00A1,
+	0x060C, 0x11C2, 0x09D3, 0x1E1D, 0x19B2, 0x0E7C, 0x166D, 0x01A3,
+	0x1933, 0x0EFD, 0x16EC, 0x0122, 0x068D, 0x1143, 0x0952, 0x1E9C,
+	0x0408, 0x13C6, 0x0BD7, 0x1C19, 0x1BB6, 0x0C78, 0x1469, 0x03A7,
+	0x1B37, 0x0CF9, 0x14E8, 0x0326, 0x0489, 0x1347, 0x0B56, 0x1C98,
+	0x1A35, 0x0DFB, 0x15EA, 0x0224, 0x058B, 0x1245, 0x0A54, 0x1D9A,
+	0x050A, 0x12C4, 0x0AD5, 0x1D1B, 0x1AB4, 0x0D7A, 0x156B, 0x02A5,
+	0x1021, 0x07EF, 0x1FFE, 0x0830, 0x0F9F, 0x1851, 0x0040, 0x178E,
+	0x0F1E, 0x18D0, 0x00C1, 0x170F, 0x10A0, 0x076E, 0x1F7F, 0x08B1,
+	0x0E1C, 0x19D2, 0x01C3, 0x160D, 0x11A2, 0x066C, 0x1E7D, 0x09B3,
+	0x1123, 0x06ED, 0x1EFC, 0x0932, 0x0E9D, 0x1953, 0x0142, 0x168C,
+	0x0C18, 0x1BD6, 0x03C7, 0x1409, 0x13A6, 0x0468, 0x1C79, 0x0BB7,
+	0x1327, 0x04E9, 0x1CF8, 0x0B36, 0x0C99, 0x1B57, 0x0346, 0x1488,
+	0x1225, 0x05EB, 0x1DFA, 0x0A34, 0x0D9B, 0x1A55, 0x0244, 0x158A,
+	0x0D1A, 0x1AD4, 0x02C5, 0x150B, 0x12A4, 0x056A, 0x1D7B, 0x0AB5,
+	0x0810, 0x1FDE, 0x07CF, 0x1001, 0x17AE, 0x0060, 0x1871, 0x0FBF,
+	0x172F, 0x00E1, 0x18F0, 0x0F3E, 0x0891, 0x1F5F, 0x074E, 0x1080,
+	0x162D, 0x01E3, 0x19F2, 0x0E3C, 0x0993, 0x1E5D, 0x064C, 0x1182,
+	0x0912, 0x1EDC, 0x06CD, 0x1103, 0x16AC, 0x0162, 0x1973, 0x0EBD,
+	0x1429, 0x03E7, 0x1BF6, 0x0C38, 0x0B97, 0x1C59, 0x0448, 0x1386,
+	0x0B16, 0x1CD8, 0x04C9, 0x1307, 0x14A8, 0x0366, 0x1B77, 0x0CB9,
+	0x0A14, 0x1DDA, 0x05CB, 0x1205, 0x15AA, 0x0264, 0x1A75, 0x0DBB,
+	0x152B, 0x02E5, 0x1AF4, 0x0D3A, 0x0A95, 0x1D5B, 0x054A, 0x1284
+	};
+  
   // serial number and lot id
   //private int m_serial_num;
   //private int m_lot_id1;
@@ -223,6 +254,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_yaw_axis = yaw_axis;
     m_algorithm = algorithm;
 
+    
     // Force the IMU reset pin to toggle on startup
     //m_reset = new DigitalOutput(18);  // MXP DIO8
     //m_reset.set(false);
@@ -236,7 +268,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_spi.setSampleDataOnFalling();
     m_spi.setClockActiveLow();
     m_spi.setChipSelectActiveLow();
-
+    
     readRegister(kRegPROD_ID); // dummy read
     
     // Validate the product ID
@@ -250,14 +282,14 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
       return;
     }
 
-    // Set IMU internal decimation to 204.8 SPS
-    writeRegister(kRegSMPL_PRD, 0x0201);
+    // Set IMU internal decimation to 102.4 SPS
+    writeRegister(kRegSMPL_PRD, 0x0301);
 
     // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
-    writeRegister(kRegMSC_CTRL, 0x0044);
+    writeRegister(kRegMSC_CTRL, 0x0056);
 
     // Configure IMU internal Bartlett filter
-    writeRegister(kRegSENS_AVG, 0x0400);
+    writeRegister(kRegSENS_AVG, 0x0402);
 
     // Read serial number and lot ID
     //m_serial_num = readRegister(kRegSERIAL_NUM);
@@ -267,33 +299,35 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     // Create data acq FIFO.  We make the FIFO 2 longer than it needs
     // to be so the input and output never overlap (we hold a reference
     // to the output while the lock is released).
+    m_samples_mutex = new ReentrantLock();
+    m_samples_not_empty = m_samples_mutex.newCondition();
+    
     m_samples = new Sample[kSamplesDepth + 2];
     for (int i=0; i<kSamplesDepth + 2; i++) {
       m_samples[i] = new Sample();
     }
-    m_samples_mutex = new ReentrantLock();
-    m_samples_not_empty = m_samples_mutex.newCondition();
-
-    // Configure interrupt on MXP DIO0 and start acquire task
-    m_interrupt = new DigitalInput(10);  // MXP DIO0
+    
+    // Configure interrupt on MXP DIO0
+    m_interrupt = new DigitalInput(10);
+    // Configure SPI bus for DMA read
+    m_spi.initAuto(8200);
+    m_spi.setAutoTransmitData(new byte[] {kGLOB_CMD},27);
+    m_spi.startAutoTrigger(m_interrupt, true, false);
+    
+    m_freed.set(false);
     m_acquire_task = new Thread(new AcquireTask(this));
-    m_interrupt.requestInterrupts();
-    m_interrupt.setUpSourceEdge(false, true);
     m_acquire_task.setDaemon(true);
     m_acquire_task.start();
-
-    // If we have offset data, use it.  Otherwise need to generate it.
-    if (readRegister(kRegXGYRO_OFF) == 0) {
-      calibrate();
-    }
 
     // Start AHRS processing
     m_calculate_task = new Thread(new CalculateTask(this));
     m_calculate_task.setDaemon(true);
     m_calculate_task.start();
-
+    
+    calibrate();
+    
     //UsageReporting.report(tResourceType.kResourceType_ADIS16448, 0);
-    LiveWindow.addSensor("ADIS16448_IMU", 0, this);
+    setName("ADIS16448_IMU");
   }
 
   /*
@@ -335,6 +369,24 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     }
   }
 
+  static int ToUShort(ByteBuffer buf) {
+	  return (buf.getShort(0)) & 0xFFFF;
+  }
+  static int ToUShort(int... data) {
+	  ByteBuffer buf = ByteBuffer.allocateDirect(data.length);
+	  for(int d : data) {
+		  buf.put((byte)d);
+	  }
+	  return ToUShort(buf);
+  }
+  
+  private static int ToShort(int... buf) {
+      return (short)(((short)buf[0]) << 8 | buf[1]);
+  }
+  static int ToShort(ByteBuffer buf) {
+	  return ToShort(buf.get(0), buf.get(1));
+  }
+  
   private int readRegister(int reg) {
     ByteBuffer buf = ByteBuffer.allocateDirect(2);
     buf.order(ByteOrder.BIG_ENDIAN);
@@ -344,14 +396,14 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_spi.write(buf, 2);
     m_spi.read(false, buf, 2);
 
-    return ((int)buf.getShort(0)) & 0xffff;
+    return ToUShort(buf);
   }
 
   private void writeRegister(int reg, int val) {
     ByteBuffer buf = ByteBuffer.allocateDirect(2);
     // low byte
     buf.put(0, (byte) (0x80 | reg));
-    buf.put(1, (byte) val);
+    buf.put(1, (byte) (val & 0xff));
     m_spi.write(buf, 2);
     // high byte
     buf.put(0, (byte) (0x81 | reg));
@@ -404,93 +456,138 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
   }
 
   private void acquire() {
-    ByteBuffer cmd = ByteBuffer.allocateDirect(26);
-    cmd.put(0, (byte) kGLOB_CMD);
-    cmd.put(1, (byte) 0);
-
-    ByteBuffer resp = ByteBuffer.allocateDirect(26);
-    resp.order(ByteOrder.BIG_ENDIAN);
-
-    synchronized (this) {
-      m_last_sample_time = Timer.getFPGATimestamp();
-    }
+    byte[] buffer = new byte[8192];
+    double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
+    int data_count = 0;
+    int array_offset = 0;
+    int imu_crc = 0;
+    double dt = 0.009765625; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
+    int data_subset[] = new int[28];
+    
     while (!m_freed.get()) {
-      if (m_interrupt.waitForInterrupt(kTimeout) ==
-          InterruptableSensorBase.WaitResult.kTimeout)
-        continue;
+      // Waiting for the buffer to fill...
+  	  Timer.delay(.020); // A delay less than 10ms could potentially overflow the local buffer
 
-      double sample_time = m_interrupt.readFallingTimestamp();
-      double dt;
-      synchronized (this) {
-        dt = sample_time - m_last_sample_time;
-        m_last_sample_time = sample_time;
-      }
+  	  data_count = m_spi.readAutoReceivedData(buffer,0,0); // Read number of bytes currently stored in the buffer
+  	  array_offset = data_count % 28; // Look for "extra" data
+  	  data_count = data_count - array_offset; // Discard "extra" data
+  	  m_spi.readAutoReceivedData(buffer,data_count,0); // Read data from DMA buffer
+  	  for(int i = 0; i < data_count; i += 28) { // Process each set of 28 bytes
+	  
+		  for(int j = 0; j < 28; j++) { // Split each set of 28 bytes into a sub-array for processing
+			  data_subset[j] = (buffer[i + j] & 0x000000FF);
+		  }
 
-      m_spi.transaction(cmd, resp, 26);
+		  // DEBUG: Plot Sub-Array Data in Terminal
+		  /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," + 
+		  ToUShort(data_subset[4], data_subset[5]) + "," + ToUShort(data_subset[6], data_subset[7]) + "," + ToUShort(data_subset[8], data_subset[9]) + "," 
+		  + ToUShort(data_subset[10], data_subset[11]) + "," +
+		  ToUShort(data_subset[12], data_subset[13]) + "," + ToUShort(data_subset[14], data_subset[15]) + "," 
+		  + ToUShort(data_subset[16], data_subset[17]) + "," +
+		  ToUShort(data_subset[18], data_subset[19]) + "," + ToUShort(data_subset[20], data_subset[21]) + "," 
+		  + ToUShort(data_subset[22], data_subset[23]) + "," +
+		  ToUShort(data_subset[24], data_subset[25]) + "," + ToUShort(data_subset[26], data_subset[27]));*/
 
-      double gyro_x = resp.getShort(4) * kDegreePerSecondPerLSB;
-      double gyro_y = resp.getShort(6) * kDegreePerSecondPerLSB;
-      double gyro_z = resp.getShort(8) * kDegreePerSecondPerLSB;
-      double accel_x = resp.getShort(10) * kGPerLSB;
-      double accel_y = resp.getShort(12) * kGPerLSB;
-      double accel_z = resp.getShort(14) * kGPerLSB;
-      double mag_x = resp.getShort(16) * kMilligaussPerLSB;
-      double mag_y = resp.getShort(18) * kMilligaussPerLSB;
-      double mag_z = resp.getShort(20) * kMilligaussPerLSB;
-      double baro = resp.getShort(22) * kMillibarPerLSB;
-      double temp = resp.getShort(24) * kDegCPerLSB + kDegCOffset;
+		  // Calculate CRC-16 on each data packet
+		  int calc_crc = 0x0000FFFF; // Starting word
+		  int read_byte = 0;
+		  for(int k = 4; k < 26; k += 2 ) { // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
+			  read_byte = data_subset[k+1]; // Process LSB
+			  calc_crc = (calc_crc >>> 8) ^ adiscrc[(calc_crc & 0x000000FF) ^ read_byte];
+			  read_byte = data_subset[k]; // Process MSB
+			  calc_crc = (calc_crc >>> 8) ^ adiscrc[(calc_crc & 0x000000FF) ^ read_byte];
+		  }
+        
+		  // Make sure to mask all but relevant 16 bits
+		  calc_crc = ~calc_crc & 0xFFFF;
+		  calc_crc = ((calc_crc << 8) | (calc_crc >> 8)) & 0xFFFF; 
+		  //System.out.println("Calc: " + calc_crc);
 
-      m_samples_mutex.lock();
-      try {
-        // If the FIFO is full, just drop it
-        if (m_calculate_started && m_samples_count < kSamplesDepth) {
-          Sample sample = m_samples[m_samples_put_index];
-          sample.gyro_x = gyro_x;
-          sample.gyro_y = gyro_y;
-          sample.gyro_z = gyro_z;
-          sample.accel_x = accel_x;
-          sample.accel_y = accel_y;
-          sample.accel_z = accel_z;
-          sample.mag_x = mag_x;
-          sample.mag_y = mag_y;
-          sample.mag_z = mag_z;
-          sample.baro = baro;
-          sample.temp = temp;
-          sample.dt = dt;
-          m_samples_put_index += 1;
-          if (m_samples_put_index == m_samples.length) {
-            m_samples_put_index = 0;
-          }
-          m_samples_count += 1;
-          m_samples_not_empty.signal();
-        }
-      } finally {
-        m_samples_mutex.unlock();
-      }
+		  // This is the data needed for CRC
+		  ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
+		  bBuf.put(buffer[i + 26]);
+		  bBuf.put(buffer[i + 27]);
+		  
+		  imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
+		  //System.out.println("IMU: " + imu_crc);
+		  //System.out.println("------------");
+		  
+		  // Compare calculated vs read CRC. Don't update outputs if CRC-16 is bad
+		  if(calc_crc == imu_crc){
+			  gyro_x = ToShort(data_subset[4], data_subset[5]) * kDegreePerSecondPerLSB;
+			  gyro_y = ToShort(data_subset[6], data_subset[7]) * kDegreePerSecondPerLSB;
+			  gyro_z = ToShort(data_subset[8], data_subset[9]) * kDegreePerSecondPerLSB;
+			  accel_x = ToShort(data_subset[10], data_subset[11]) * kGPerLSB;
+			  accel_y = ToShort(data_subset[12], data_subset[13]) * kGPerLSB;
+			  accel_z = ToShort(data_subset[14], data_subset[15]) * kGPerLSB;
+			  mag_x = ToShort(data_subset[16], data_subset[17]) * kMilligaussPerLSB;
+			  mag_y = ToShort(data_subset[18], data_subset[19]) * kMilligaussPerLSB;
+			  mag_z = ToShort(data_subset[20], data_subset[21]) * kMilligaussPerLSB;
+			  baro = ToUShort(data_subset[22], data_subset[23]) * kMillibarPerLSB;
+			  temp = ToShort(data_subset[24], data_subset[25]) * kDegCPerLSB + kDegCOffset;
+			  			  
+			  // Print scaled data to terminal
+			  /*System.out.println(gyro_x + "," + gyro_y + "," + gyro_z + "," + accel_x + "," + accel_y + "," 
+			  + accel_z + "," + mag_x + "," + mag_y + "," + mag_z + "," + baro + "," + temp + "," + "," 
+			  + ToUShort(data_subset[26], data_subset[27]));*/
+			  //System.out.println("---------------------"); // Frame divider (or else data looks like a mess)
+			  
+			  m_samples_mutex.lock();
+			  try{
+				  // If the FIFO is full, just drop it
+				  if (m_calculate_started && m_samples_count < kSamplesDepth)
+				  {
+					Sample sample = m_samples[m_samples_put_index];
+					sample.gyro_x = gyro_x;
+					sample.gyro_y = gyro_y;
+					sample.gyro_z = gyro_z;
+					sample.accel_x = accel_x;
+					sample.accel_y = accel_y;
+					sample.accel_z = accel_z;
+					sample.mag_x = mag_x;
+					sample.mag_y = mag_y;
+					sample.mag_z = mag_z;
+					sample.baro = baro;
+					sample.temp = temp;
+					sample.dt = dt;
+					++m_samples_put_index;
+					if (m_samples_put_index == (kSamplesDepth + 2))
+					  m_samples_put_index = 0;
+					++m_samples_count;
+					m_samples_not_empty.signal();
+				  }
+			  }catch(Exception e) {
+				  break;
+			  }finally {
+				  m_samples_mutex.unlock();
+			  }
 
-      // Update global state
-      synchronized (this) {
-        m_gyro_x = gyro_x;
-        m_gyro_y = gyro_y;
-        m_gyro_z = gyro_z;
-        m_accel_x = accel_x;
-        m_accel_y = accel_y;
-        m_accel_z = accel_z;
-        m_mag_x = mag_x;
-        m_mag_y = mag_y;
-        m_mag_z = mag_z;
-        m_baro = baro;
-        m_temp = temp;
+			// Update global state
+			synchronized(this){
+			  m_gyro_x = gyro_x;
+			  m_gyro_y = gyro_y;
+			  m_gyro_z = gyro_z;
+			  m_accel_x = accel_x;
+			  m_accel_y = accel_y;
+			  m_accel_z = accel_z;
+			  m_mag_x = mag_x;
+			  m_mag_y = mag_y;
+			  m_mag_z = mag_z;
+			  m_baro = baro;
+			  m_temp = temp;
 
-        m_accum_count += 1;
-        m_accum_gyro_x += gyro_x;
-        m_accum_gyro_y += gyro_y;
-        m_accum_gyro_z += gyro_z;
+			  ++m_accum_count;
+			  m_accum_gyro_x += gyro_x;
+			  m_accum_gyro_y += gyro_y;
+			  m_accum_gyro_z += gyro_z;
 
-        m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
-        m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
-        m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
-      }
+			  m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
+			  m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
+			  m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
+			  
+			}
+		 }
+	  }
     }
   }
 
@@ -508,11 +605,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
           }
         }
         sample = m_samples[m_samples_take_index];
-        m_samples_take_index += 1;
-        if (m_samples_take_index == m_samples.length) {
+        ++m_samples_take_index;
+        if (m_samples_take_index == (kSamplesDepth + 2))
           m_samples_take_index = 0;
-        }
-        m_samples_count -= 1;
+        --m_samples_count;
       } catch (InterruptedException e) {
         break;
       } finally {
@@ -947,7 +1043,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
     m_gyro_x_prev = sample.gyro_x;
     m_gyro_y_prev = sample.gyro_y;
     m_gyro_z_prev = sample.gyro_z;
-
+    
     // Update global state
     synchronized (this) {
       m_roll = roll;
@@ -1077,24 +1173,23 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, LiveWind
   public synchronized void setTiltCompYaw(boolean enabled) {
     m_tilt_comp_yaw = enabled;
   }
-
+  
   /**
    * {@inheritDoc}
    */
   @Override
-  public void updateTable() {
-    ITable table = getTable();
-    if (table != null) {
-      table.putNumber("Value", getAngle());
-      table.putNumber("Pitch", getPitch());
-      table.putNumber("Roll", getRoll());
-      table.putNumber("Yaw", getYaw());
-      table.putNumber("AccelX", getAccelX());
-      table.putNumber("AccelY", getAccelY());
-      table.putNumber("AccelZ", getAccelZ());
-      table.putNumber("AngleX", getAngleX());
-      table.putNumber("AngleY", getAngleY());
-      table.putNumber("AngleZ", getAngleZ());
-    }
+  public void initSendable(SendableBuilder builder) {
+    builder.addDoubleProperty("Value", ()-> getAngle(), null);
+    builder.addDoubleProperty("Pitch", ()-> getPitch(), null);
+    builder.addDoubleProperty("Roll", ()-> getRoll(), null);
+    builder.addDoubleProperty("Yaw", ()-> getYaw(), null);
+    builder.addDoubleProperty("AccelX", ()-> getAccelX(), null);
+    builder.addDoubleProperty("AccelY", ()-> getAccelY(), null);
+    builder.addDoubleProperty("AccelZ", ()-> getAccelZ(), null);
+    builder.addDoubleProperty("AngleX", ()-> getAngleX(), null);
+    builder.addDoubleProperty("AngleY", ()-> getAngleY(), null);
+    builder.addDoubleProperty("AngleZ", ()-> getAngleZ(), null);
+    super.initSendable(builder);
   }
+  
 }
