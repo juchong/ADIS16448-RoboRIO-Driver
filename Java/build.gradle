@@ -1,0 +1,15 @@
+plugins {
+    id "java"
+    id 'maven'
+}
+apply plugin: "jaci.openrio.gradle.GradleRIO"
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile wpilib()
+}
