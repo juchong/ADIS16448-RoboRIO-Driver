@@ -1,4 +1,4 @@
-LabVIEW Instructions
+# LabVIEW Instructions
 
 ## Self-Extracting Installation
 This driver assumes you have a working LabVIEW installation and 2018.0+ FRC software package already installed on your system. The self-extracting installer can be downloaded from the releases page [here](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases). 
