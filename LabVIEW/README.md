@@ -11,7 +11,7 @@ Copy the `ADIS16448 IMU` folder into the folder where your LabVIEW robot project
 ## Usage
 The LabVIEW driver can be used like any other sensor. If the **installer** was used, all .vi's can be found in the pallet shown below:
 
-![ADIS16448 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/pallet.PNG)
+![ADIS16448 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/pallet.png)
 
 If the driver was added to your project **manually**, all user .vi's should be located in your project like this:
 
