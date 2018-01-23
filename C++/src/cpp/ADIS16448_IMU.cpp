@@ -160,7 +160,7 @@ ADIS16448_IMU::ADIS16448_IMU(Axis yaw_axis, AHRSAlgorithm algorithm)
   DigitalInput *dio = new DigitalInput(10);
 
   // Configure SPI bus for DMA read
-  m_spi.InitAuto(0);
+  m_spi.InitAuto(8200);
   m_spi.SetAutoTransmitData(kGLOB_CMD,27);
   m_spi.StartAutoTrigger(*dio,true,false);
 
@@ -235,6 +235,7 @@ void ADIS16448_IMU::Reset() {
  * Delete (free) the spi port used for the IMU.
  */
 ADIS16448_IMU::~ADIS16448_IMU() {
+  m_spi.StopAuto();
   m_freed = true;
   m_samples_not_empty.notify_all();
   if (m_acquire_task.joinable()) m_acquire_task.join();
@@ -964,6 +965,9 @@ void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
   auto pitch = builder.GetEntry("Pitch").GetHandle();
   auto roll = builder.GetEntry("Roll").GetHandle();
   auto yaw = builder.GetEntry("Yaw").GetHandle();
+  auto gyroX = builder.GetEntry("GyroX").GetHandle();
+  auto gyroY = builder.GetEntry("GyroY").GetHandle();
+  auto gyroZ = builder.GetEntry("GyroZ").GetHandle();
   auto accelX = builder.GetEntry("AccelX").GetHandle();
   auto accelY = builder.GetEntry("AccelY").GetHandle();
   auto accelZ = builder.GetEntry("AccelZ").GetHandle();
@@ -975,6 +979,9 @@ void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
 	nt::NetworkTableEntry(pitch).SetDouble(GetPitch());
 	nt::NetworkTableEntry(roll).SetDouble(GetRoll());
 	nt::NetworkTableEntry(yaw).SetDouble(GetYaw());
+	nt::NetworkTableEntry(gyroX).SetDouble(GetRateX());
+	nt::NetworkTableEntry(gyroY).SetDouble(GetRateY());
+	nt::NetworkTableEntry(gyroZ).SetDouble(GetRateZ());
 	nt::NetworkTableEntry(accelX).SetDouble(GetAccelX());
 	nt::NetworkTableEntry(accelY).SetDouble(GetAccelY());
 	nt::NetworkTableEntry(accelZ).SetDouble(GetAccelZ());
