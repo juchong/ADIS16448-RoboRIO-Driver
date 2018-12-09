@@ -1,7 +1,7 @@
 # LabVIEW Instructions
 
 ## Self-Extracting Installation
-This driver assumes you have a working LabVIEW installation and 2018.0+ FRC software package already installed on your system. The self-extracting installer can be downloaded from the releases page [here](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases). 
+This driver assumes you have a working LabVIEW installation and 2019.0+ FRC software package already installed on your system. The self-extracting installer can be downloaded from the releases page [here](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases). Previous releases for older FRC software packages can also be found on the releases page. 
 
 Once downloaded, run the installer with administrator privileges. All the required files will be extracted to integrate the IMU driver with LabVIEW. Examples will also be installed to make testing your sensor easy!
 
