@@ -1,0 +1,23 @@
+plugins {
+  id "cpp"
+  id "visual-studio"
+}
+apply plugin: "jaci.openrio.gradle.GradleRIO"
+
+model {
+  components {
+    adisDriver(NativeExecutableSpec) {
+      targetPlatform 'roborio'
+      sources.cpp {
+        source {
+          srcDir 'src/cpp'
+        }
+        exportedHeaders{
+          srcDirs = ['src/cpp', 'src/include']
+          include '**/*.hpp', '**/*.h'
+        }
+        lib library: "wpilib"
+      }
+    }
+  }
+}

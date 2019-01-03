@@ -1,23 +1,34 @@
 plugins {
-  id "cpp"
-  id "visual-studio"
+    id "cpp"
+    id "edu.wpi.first.GradleRIO" version "2019.1.1-beta-2a"
 }
-apply plugin: "jaci.openrio.gradle.GradleRIO"
+
+def includeSrcInIncludeRoot = false
 
 model {
-  components {
-    adisDriver(NativeExecutableSpec) {
-      targetPlatform 'roborio'
-      sources.cpp {
-        source {
-          srcDir 'src/cpp'
+    components {
+        adis16448imu(NativeLibrarySpec) {
+            targetPlatform 'roborio'
+            targetPlatform 'desktop'
+
+            sources.cpp {
+                source {
+                    srcDir 'src/main/cpp'
+                }
+                exportedHeaders {
+                    srcDir 'src/main/include'
+                    if (includeSrcInIncludeRoot) {
+                        srcDir 'src/main/cpp'
+                    }
+                }
+            }
+
+            // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
+            useLibrary(it, "wpilib")
         }
-        exportedHeaders{
-          srcDirs = ['src/cpp', 'src/include']
-          include '**/*.hpp', '**/*.h'
-        }
-        lib library: "wpilib"
-      }
     }
-  }
+}
+
+wrapper {
+    gradleVersion = '4.9'
 }

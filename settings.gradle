@@ -1,4 +1,0 @@
-include 'C++'
-findProject(':C++')?.name = 'cpp'
-include 'Java'
-

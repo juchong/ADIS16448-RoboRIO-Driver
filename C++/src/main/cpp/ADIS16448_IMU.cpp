@@ -21,6 +21,11 @@
 #include <frc/WPIErrors.h>
 #include <hal/HAL.h>
 
+// Not always defined in cmath (not part of standard)
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
+
 // CRC-16 Look-Up Table
 const uint16_t adiscrc[256] = {
 0x0000, 0x17CE, 0x0FDF, 0x1811, 0x1FBE, 0x0870, 0x1061, 0x07AF,
@@ -238,7 +243,7 @@ ADIS16448_IMU::~ADIS16448_IMU() {
 }
 
 void ADIS16448_IMU::Acquire() {
-  uint32_t buffer[2000];
+  uint8_t buffer[2000];
   double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
   int data_count = 0;
   int data_remainder = 0;
