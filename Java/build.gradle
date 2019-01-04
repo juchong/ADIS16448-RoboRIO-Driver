@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2019.1.1-beta-2a"
+    id "edu.wpi.first.GradleRIO" version "2019.1.1-beta-4"
 }
 
 // Maven central needed for JUnit
@@ -11,7 +11,7 @@ repositories {
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {
-    compile wpilib()
+    compile wpi.deps.wpilib()
 }
 
 jar.baseName = 'ADIS16448_IMU'
@@ -24,5 +24,5 @@ jar {
 }
 
 wrapper {
-    gradleVersion = '4.9'
+    gradleVersion = '5.0'
 }

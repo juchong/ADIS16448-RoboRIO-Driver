@@ -460,7 +460,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   }
 
   private void acquire() {
-    byte[] buffer = new byte[8192];
+    long[] buffer = new long[8192];
     double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
     int data_count = 0;
     int array_offset = 0;
@@ -510,8 +510,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 
         // This is the data needed for CRC
         ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
-        bBuf.put(buffer[i + 26]);
-        bBuf.put(buffer[i + 27]);
+        bBuf.put((byte)(buffer[i + 26] & 0x000000FF));
+        bBuf.put((byte)(buffer[i + 27] & 0x000000FF));
         
         imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
         //System.out.println("IMU: " + imu_crc);

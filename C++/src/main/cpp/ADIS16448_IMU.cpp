@@ -243,7 +243,7 @@ ADIS16448_IMU::~ADIS16448_IMU() {
 }
 
 void ADIS16448_IMU::Acquire() {
-  uint8_t buffer[2000];
+  uint32_t buffer[2000];
   double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
   int data_count = 0;
   int data_remainder = 0;
