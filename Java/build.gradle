@@ -8,21 +8,15 @@ repositories {
     mavenCentral()
 }
 
-// Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
-// Also defines JUnit 4.
 dependencies {
     compile wpi.deps.wpilib()
 }
 
-jar.baseName = 'ADIS16448_IMU'
+jar.baseName = "ADIS16448_IMU"
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.
 jar {
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-}
-
-wrapper {
-    gradleVersion = '5.0'
 }

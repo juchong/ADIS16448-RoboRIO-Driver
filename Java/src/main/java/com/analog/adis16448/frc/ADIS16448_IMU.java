@@ -14,6 +14,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import edu.wpi.first.hal.HAL;
+import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -330,7 +332,9 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     
     calibrate();
     
-    //UsageReporting.report(tResourceType.kResourceType_ADIS16448, 0);
+    // Report usage and post data to DS
+
+    HAL.report(tResourceType.kResourceType_ADIS16448, 0);
     setName("ADIS16448_IMU");
   }
 
@@ -415,6 +419,19 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     m_spi.write(buf, 2);
   }
 
+  private void printBytes(int[] data) {
+		for(int i = 0; i < data.length; ++i) {
+			System.out.print(data[i] + " ");
+		}
+		System.out.println();
+	}
+  private void printBytes(byte[] data) {
+		for(int i = 0; i < data.length; ++i) {
+			System.out.print(data[i] + " ");
+		}
+		System.out.println();
+	}
+
   /**
    * {@inheritDoc}
    */
@@ -460,7 +477,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   }
 
   private void acquire() {
-    long[] buffer = new long[8192];
+    ByteBuffer readBuf = ByteBuffer.allocateDirect(8192);    
     double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
     int data_count = 0;
     int array_offset = 0;
@@ -473,15 +490,25 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
       // Waiting for the buffer to fill...
   	  Timer.delay(.020); // A delay less than 10ms could potentially overflow the local buffer
 
-  	  data_count = m_spi.readAutoReceivedData(buffer,0,0); // Read number of bytes currently stored in the buffer
-  	  array_offset = data_count % 28; // Look for "extra" data
+      final int timeout_data_len = 8;
+
+  	  data_count = m_spi.readAutoReceivedData(readBuf,0,0); // Read number of bytes currently stored in the buffer
+  	  array_offset = data_count % (28 + timeout_data_len); // Look for "extra" data
   	  data_count = data_count - array_offset; // Discard "extra" data
-  	  m_spi.readAutoReceivedData(buffer,data_count,0); // Read data from DMA buffer
+  	  m_spi.readAutoReceivedData(readBuf,data_count,0); // Read data from DMA buffer
   	  for(int i = 0; i < data_count; i += 29) { // Process each set of 28 bytes
-	  
-		    for(int j = 1; j < 29; j++) { // Split each set of 28 bytes into a sub-array for processing
-			    data_subset[j - 1] = (buffer[i + j] & 0x000000FF);
-		    }
+        //long timeout_new = readBuf.getLong(0);
+        //System.out.println("Timeout_new " + timeout_new);
+        //readBuf.position(8);
+        readBuf.position(timeout_data_len);
+		    byte[] buffer = new byte[readBuf.remaining()]; // Does not have timestamp in front any more
+        readBuf.get(buffer);
+		    for(int j = 0; j < 28; j++) { // Split each set of 28 bytes into a sub-array for processing
+			    data_subset[j] = (buffer[i + j] & 0x000000FF);
+        }
+        
+        // DEBUG: Print the received data
+        printBytes(data_subset);
 
         // DEBUG: Plot Sub-Array Data in Terminal
         /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," + 
@@ -510,8 +537,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 
         // This is the data needed for CRC
         ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
-        bBuf.put((byte)(buffer[i + 26] & 0x000000FF));
-        bBuf.put((byte)(buffer[i + 27] & 0x000000FF));
+        bBuf.put(buffer[i + 26]);
+        bBuf.put(buffer[i + 27]);
         
         imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
         //System.out.println("IMU: " + imu_crc);
@@ -597,6 +624,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
             m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
             
           }
+        }else{
+          System.err.println("Invalid CRC");
         }
 	    }
     }
