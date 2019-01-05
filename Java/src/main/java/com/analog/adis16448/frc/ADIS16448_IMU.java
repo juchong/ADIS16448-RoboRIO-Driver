@@ -157,7 +157,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   private AtomicBoolean m_freed = new AtomicBoolean(false);
 
   private SPI m_spi;
-  private DigitalOutput m_reset;
   private DigitalInput m_interrupt;
 
   // Sample from the IMU
@@ -225,7 +224,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   private boolean m_calculate_started = false;
 
   // Previous timestamp
-  double timestamp_old = 0;
+  long timestamp_old = 0;
 
   private static class AcquireTask implements Runnable {
     private ADIS16448_IMU imu;
@@ -260,13 +259,12 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     m_yaw_axis = yaw_axis;
     m_algorithm = algorithm;
 
-    
-    // Force the IMU reset pin to toggle on startup
-    //m_reset = new DigitalOutput(18);  // MXP DIO8
-    //m_reset.set(false);
-    //Timer.delay(0.1);
-    //m_reset.set(true);
-    //Timer.delay(0.1);
+    // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
+    DigitalOutput m_reset_out = new DigitalOutput(18);  // Drive MXP DIO8 low
+    Timer.delay(0.01);  // Wait 10ms
+    m_reset_out.close();
+    DigitalInput m_reset_in = new DigitalInput(18);  // Set MXP DIO8 high
+    Timer.delay(0.5);  // Wait 500ms
 
     m_spi = new SPI(SPI.Port.kMXP);
     m_spi.setClockRate(1000000);
@@ -289,7 +287,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     }
 
     // Set IMU internal decimation to 102.4 SPS
-    writeRegister(kRegSMPL_PRD, 0x0301);
+    writeRegister(kRegSMPL_PRD, 0x0001);
 
     // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
     writeRegister(kRegMSC_CTRL, 0x0056);
@@ -388,6 +386,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	  return ToUShort(buf);
   }
   
+  public static long ToULong(int sint) {
+		return sint & 0x00000000FFFFFFFFL;
+	}
+
   private static int ToShort(int... buf) {
       return (short)(((short)buf[0]) << 8 | buf[1]);
   }
@@ -410,13 +412,21 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   private void writeRegister(int reg, int val) {
     ByteBuffer buf = ByteBuffer.allocateDirect(2);
     // low byte
-    buf.put(0, (byte) (0x80 | reg));
+    buf.put(0, (byte)((0x80 | reg) | 0x10));
     buf.put(1, (byte) (val & 0xff));
     m_spi.write(buf, 2);
+    for(int i = 0; i < buf.remaining(); ++i){
+      System.out.println("" + buf.get(i));
+    }
+    System.out.println("------");
     // high byte
     buf.put(0, (byte) (0x81 | reg));
     buf.put(1, (byte) (val >> 8));
     m_spi.write(buf, 2);
+    for(int i = 0; i < buf.remaining(); ++i){
+      System.out.println("" + buf.get(i));
+    }
+    System.out.println("------");
   }
 
   private void printBytes(int[] data) {
@@ -477,12 +487,13 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   }
 
   private void acquire() {
-    ByteBuffer readBuf = ByteBuffer.allocateDirect(8192);    
+    ByteBuffer readBuf = ByteBuffer.allocateDirect(64000);
+    readBuf.order(ByteOrder.LITTLE_ENDIAN);
     double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
     int data_count = 0;
     int array_offset = 0;
     int imu_crc = 0;
-    double dt = 0.009765625; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
+    double dt = 0; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
     int data_subset[] = new int[28];
     long timestamp_new = 0;
     
@@ -490,25 +501,17 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
       // Waiting for the buffer to fill...
   	  Timer.delay(.020); // A delay less than 10ms could potentially overflow the local buffer
 
-      final int timeout_data_len = 8;
-
   	  data_count = m_spi.readAutoReceivedData(readBuf,0,0); // Read number of bytes currently stored in the buffer
-  	  array_offset = data_count % (28 + timeout_data_len); // Look for "extra" data
+  	  array_offset = data_count % 116; // Look for "extra" data This is 116 not 29 like in C++ b/c everything is 32-bits and takes up 4 bytes in the buffer
   	  data_count = data_count - array_offset; // Discard "extra" data
   	  m_spi.readAutoReceivedData(readBuf,data_count,0); // Read data from DMA buffer
-  	  for(int i = 0; i < data_count; i += 29) { // Process each set of 28 bytes
-        //long timeout_new = readBuf.getLong(0);
-        //System.out.println("Timeout_new " + timeout_new);
-        //readBuf.position(8);
-        readBuf.position(timeout_data_len);
-		    byte[] buffer = new byte[readBuf.remaining()]; // Does not have timestamp in front any more
-        readBuf.get(buffer);
+  	  for(int i = 0; i < data_count; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)
 		    for(int j = 0; j < 28; j++) { // Split each set of 28 bytes into a sub-array for processing
-			    data_subset[j] = (buffer[i + j] & 0x000000FF);
+			    data_subset[j] = readBuf.getInt(4 + (i + j) * 4); // (i + j) * 4 = position in  buffer + 4 to skip timestamp
         }
         
         // DEBUG: Print the received data
-        printBytes(data_subset);
+        //printBytes(data_subset);
 
         // DEBUG: Plot Sub-Array Data in Terminal
         /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," + 
@@ -537,8 +540,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 
         // This is the data needed for CRC
         ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
-        bBuf.put(buffer[i + 26]);
-        bBuf.put(buffer[i + 27]);
+        bBuf.put((byte)readBuf.getInt((i + 26) * 4 + 4)); // (i + 26) * 4 = position (32-bit ints) + 4 to skip timestamp
+        bBuf.put((byte)readBuf.getInt((i + 27) * 4 + 4)); // (i + 27) * 4 = position (32-bit ints) + 4 to skip timestamp
         
         imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
         //System.out.println("IMU: " + imu_crc);
@@ -546,10 +549,9 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
         
         // Compare calculated vs read CRC. Don't update outputs if CRC-16 is bad
         if(calc_crc == imu_crc) {
-
           // Calculate delta-time (dt) using FPGA timestamps
-          timestamp_new = buffer[i];  // Extract timestamp from buffer
-          dt = (timestamp_new - timestamp_old)/1000000; // Calculate dt and convert us to seconds
+          timestamp_new = ToULong(readBuf.getInt(i * 4));
+          dt = (timestamp_new - timestamp_old)/1000000.0; // Calculate dt and convert us to seconds
           timestamp_old = timestamp_new; // Store new timestamp in old variable for next cycle
 
           gyro_x = ToShort(data_subset[4], data_subset[5]) * kDegreePerSecondPerLSB;
@@ -575,24 +577,24 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
             // If the FIFO is full, just drop it
             if (m_calculate_started && m_samples_count < kSamplesDepth)
             {
-            Sample sample = m_samples[m_samples_put_index];
-            sample.gyro_x = gyro_x;
-            sample.gyro_y = gyro_y;
-            sample.gyro_z = gyro_z;
-            sample.accel_x = accel_x;
-            sample.accel_y = accel_y;
-            sample.accel_z = accel_z;
-            sample.mag_x = mag_x;
-            sample.mag_y = mag_y;
-            sample.mag_z = mag_z;
-            sample.baro = baro;
-            sample.temp = temp;
-            sample.dt = dt;
-            ++m_samples_put_index;
-            if (m_samples_put_index == (kSamplesDepth + 2))
-              m_samples_put_index = 0;
-            ++m_samples_count;
-            m_samples_not_empty.signal();
+              Sample sample = m_samples[m_samples_put_index];
+              sample.gyro_x = gyro_x;
+              sample.gyro_y = gyro_y;
+              sample.gyro_z = gyro_z;
+              sample.accel_x = accel_x;
+              sample.accel_y = accel_y;
+              sample.accel_z = accel_z;
+              sample.mag_x = mag_x;
+              sample.mag_y = mag_y;
+              sample.mag_z = mag_z;
+              sample.baro = baro;
+              sample.temp = temp;
+              sample.dt = dt;
+              ++m_samples_put_index;
+              if (m_samples_put_index == (kSamplesDepth + 2))
+                m_samples_put_index = 0;
+              ++m_samples_count;
+              m_samples_not_empty.signal();
             }
           }catch(Exception e) {
             break;
@@ -625,7 +627,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
             
           }
         }else{
-          System.err.println("Invalid CRC");
+          System.out.println("Invalid CRC");
         }
 	    }
     }

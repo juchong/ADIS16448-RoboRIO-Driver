@@ -389,6 +389,7 @@ class ADIS16448_IMU : public GyroBase {
 
   // Last sample time
   double m_last_sample_time = 0.0;
+  double timestamp_old = 0;
 
   // Kalman (AHRS)
   double m_ahrs_q1 = 1, m_ahrs_q2 = 0, m_ahrs_q3 = 0, m_ahrs_q4 = 0;

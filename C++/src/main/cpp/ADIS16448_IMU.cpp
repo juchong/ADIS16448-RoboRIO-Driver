@@ -81,8 +81,6 @@ static constexpr double kAccelScale = 9.80665;    // mg/sec/sec
 static constexpr double kMagScale = 0.1;          // uTesla
 static constexpr double kBeta = 1;
 
-double timestamp_old = 0;
-
 static inline uint16_t ToUShort(const uint8_t* buf) {
   return ((uint16_t)(buf[0]) << 8) | buf[1];
 }
@@ -100,12 +98,12 @@ ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, kComplementary, SPI::Port::kM
 
 ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port) : m_yaw_axis(yaw_axis), m_algorithm(algorithm), m_spi(port){
 
-/*   // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
+  // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
   DigitalOutput *m_reset_out = new DigitalOutput(18);  // Drive MXP DIO8 low
   Wait(0.01);  // Wait 10ms
-  m_reset_out -> ~DigitalOutput();
+  delete m_reset_out;
   DigitalInput *m_reset_in = new DigitalInput(18);  // Set MXP DIO8 high
-  m_reset_in -> ~DigitalInput(); */
+  //delete m_reset_in;
   Wait(0.5);  // Wait 500ms
 
   // Set general SPI settings
@@ -123,7 +121,7 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
     return;
   }
   else {
-    DriverStation::ReportError("ADIS16448 IMU Detected. Starting calibration.");
+    DriverStation::ReportWarning("ADIS16448 IMU Detected. Starting calibration.");
   }
 
   // Set IMU internal decimation to 204.8 SPS
@@ -134,6 +132,8 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
 
   // Configure IMU internal Bartlett filter
   WriteRegister(kRegSENS_AVG, 0x0402);
+
+  Wait(5);
 
   // Configure interrupt on MXP DIO0
   DigitalInput *m_interrupt = new DigitalInput(10);
@@ -157,7 +157,7 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
   Reset();
   
   // Let the user know the IMU was initiallized successfully
-  DriverStation::ReportError("ADIS16448 IMU Successfully Initialized!");
+  DriverStation::ReportWarning("ADIS16448 IMU Successfully Initialized!");
 
   // Report usage and post data to DS
   HAL_Report(HALUsageReporting::kResourceType_ADIS16448, 0);
@@ -272,7 +272,7 @@ void ADIS16448_IMU::Acquire() {
     std::cout << " " << std::endl;
     std::cout << "End" << std::endl;*/ 
 
-	  for (int i = 0; i < data_to_read; i += 29) { // Process each set of 28 bytes + timestamp (29 total)
+	  for (int i = 0; i < data_to_read; i += 29) { // Process each set of 28 ints + timestamp (29 total)
 
 		  for (int j = 1; j < 29; j++) { 
 			  data_subset[j - 1] = buffer[i + j];  // Split each set of 28 bytes into a sub-array for processing
