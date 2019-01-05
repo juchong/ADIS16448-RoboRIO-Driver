@@ -91,20 +91,19 @@ static inline int16_t ToShort(const uint8_t* buf) {
 
 using namespace frc;
 
-/**
- * Constructor.
- */
 ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, kComplementary, SPI::Port::kMXP) {}
 
 ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port) : m_yaw_axis(yaw_axis), m_algorithm(algorithm), m_spi(port){
 
   // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
+  // Relies on the RIO hardware by default configuring an output as low
+  // and configuring an input as high Z. The 10k pull-up resistor internal to the 
+  // IMU then forces the reset line high for normal operation. 
   DigitalOutput *m_reset_out = new DigitalOutput(18);  // Drive MXP DIO8 low
   Wait(0.01);  // Wait 10ms
   delete m_reset_out;
   DigitalInput *m_reset_in = new DigitalInput(18);  // Set MXP DIO8 high
-  //delete m_reset_in;
-  Wait(0.5);  // Wait 500ms
+  Wait(0.5);  // Wait 500ms for reset to complete
 
   // Set general SPI settings
   m_spi.SetClockRate(1000000);
@@ -127,13 +126,11 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
   // Set IMU internal decimation to 204.8 SPS
   WriteRegister(kRegSMPL_PRD, 0x0201);
 
-  // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
+  // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP), PoP, and G sensitivity compensation
   WriteRegister(kRegMSC_CTRL, 0x0056);
 
   // Configure IMU internal Bartlett filter
   WriteRegister(kRegSENS_AVG, 0x0402);
-
-  Wait(5);
 
   // Configure interrupt on MXP DIO0
   DigitalInput *m_interrupt = new DigitalInput(10);
@@ -244,7 +241,7 @@ ADIS16448_IMU::~ADIS16448_IMU() {
 
 void ADIS16448_IMU::Acquire() {
   uint32_t buffer[2000];
-  double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
+  double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp, dt, status;
   int data_count = 0;
   int data_remainder = 0;
   int data_to_read = 0;
@@ -318,6 +315,7 @@ void ADIS16448_IMU::Acquire() {
         mag_z = ToShort(&data_subset[20]) * kMilligaussPerLSB;
         baro = ToUShort(&data_subset[22]) * kMillibarPerLSB;
         temp = ToShort(&data_subset[24]) * kDegCPerLSB + kDegCOffset;
+        status = ToShort(&data_subset[2]);
 
         {
           std::lock_guard<wpi::mutex> sync(m_samples_mutex);
@@ -335,6 +333,7 @@ void ADIS16448_IMU::Acquire() {
             sample.mag_z = mag_z;
             sample.baro = baro;
             sample.temp = temp;
+            sample.status = status;
             sample.dt = dt;
             ++m_samples_put_index;
             if (m_samples_put_index == (kSamplesDepth + 2))
@@ -358,6 +357,8 @@ void ADIS16448_IMU::Acquire() {
           m_mag_z = mag_z;
           m_baro = baro;
           m_temp = temp;
+          m_dt = dt;
+          m_status = status;
 
           // Accumulate gyro for offset calibration
           ++m_accum_count;
@@ -955,7 +956,12 @@ double ADIS16448_IMU::GetYaw() const {
 
 double ADIS16448_IMU::Getdt() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  return dt;
+  return m_dt;
+}
+
+double ADIS16448_IMU::GetStatus() const {
+  std::lock_guard<wpi::mutex> sync(m_mutex);
+  return m_status;
 }
 
 double ADIS16448_IMU::GetBarometricPressure() const {
@@ -1009,6 +1015,7 @@ void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
   auto angleY = builder.GetEntry("AngleY").GetHandle();
   auto angleZ = builder.GetEntry("AngleZ").GetHandle();
   auto dt = builder.GetEntry("dt").GetHandle();
+  auto status = builder.GetEntry("Status").GetHandle();
   builder.SetUpdateTable([=]() {
 	nt::NetworkTableEntry(value).SetDouble(GetAngle());
 	nt::NetworkTableEntry(pitch).SetDouble(GetPitch());
@@ -1024,5 +1031,6 @@ void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
 	nt::NetworkTableEntry(angleY).SetDouble(GetAngleY());
 	nt::NetworkTableEntry(angleZ).SetDouble(GetAngleZ());
   nt::NetworkTableEntry(dt).SetDouble(Getdt());
+  nt::NetworkTableEntry(status).SetDouble(GetStatus());
   });
 }
