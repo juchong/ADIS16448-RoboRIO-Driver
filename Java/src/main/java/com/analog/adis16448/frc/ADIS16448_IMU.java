@@ -415,18 +415,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     buf.put(0, (byte)((0x80 | reg) | 0x10));
     buf.put(1, (byte) (val & 0xff));
     m_spi.write(buf, 2);
-    for(int i = 0; i < buf.remaining(); ++i){
-      System.out.println("" + buf.get(i));
-    }
-    System.out.println("------");
     // high byte
     buf.put(0, (byte) (0x81 | reg));
     buf.put(1, (byte) (val >> 8));
     m_spi.write(buf, 2);
-    for(int i = 0; i < buf.remaining(); ++i){
-      System.out.println("" + buf.get(i));
-    }
-    System.out.println("------");
   }
 
   private void printBytes(int[] data) {
