@@ -32,7 +32,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableBuilder;
  */
 @SuppressWarnings("unused")
 public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable {
-	private static final double kCalibrationSampleTime = 3.0; // Calibration time in seconds
+	private static final double kCalibrationSampleTime = 5.0; // Calibration time in seconds
 	private static final double kDegreePerSecondPerLSB = 1.0/25.0;
 	private static final double kGPerLSB = 1.0/1200.0;
 	private static final double kMilligaussPerLSB = 1.0/7.0;
