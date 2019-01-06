@@ -1223,7 +1223,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     builder.addDoubleProperty("AngleX", ()-> getAngleX(), null);
     builder.addDoubleProperty("AngleY", ()-> getAngleY(), null);
     builder.addDoubleProperty("AngleZ", ()-> getAngleZ(), null);
-    super.initSendable(builder);
   }
   
 }
