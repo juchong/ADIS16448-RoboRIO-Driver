@@ -39,292 +39,301 @@ namespace frc {
  */
 
 class ADIS16448_IMU : public GyroBase {
- public:
+  public:
 
-  enum AHRSAlgorithm { kComplementary, kMadgwick };
-  enum IMUAxis { kX, kY, kZ };
+    enum AHRSAlgorithm { kComplementary, kMadgwick };
+    enum IMUAxis { kX, kY, kZ };
 
-  /**
-  * IMU constructor on onboard MXP CS0, Z-up orientation, and complementary AHRS computation.
-  */
-  ADIS16448_IMU();
+    /**
+    * IMU constructor on onboard MXP CS0, Z-up orientation, and complementary AHRS computation.
+    */
+    ADIS16448_IMU();
 
-  /**
-   * IMU constructor on the specified MXP port and orientation.
-   * 
-   * @param yaw_axis The axis where gravity is present. Valid options are kX, kY, and kZ
-   * @param algorithm The AHRS algorithm to use. Valid options are kComplementary and kMadgwick
-   * @param port The SPI port where the IMU is connected.
-   */
-  explicit ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port);
+    /**
+     * IMU constructor on the specified MXP port and orientation.
+     * 
+     * @param yaw_axis The axis where gravity is present. Valid options are kX, kY, and kZ
+     * @param algorithm The AHRS algorithm to use. Valid options are kComplementary and kMadgwick
+     * @param port The SPI port where the IMU is connected.
+     */
+    explicit ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port);
 
-  ~ADIS16448_IMU();
+    ~ADIS16448_IMU();
 
-  ADIS16448_IMU(ADIS16448_IMU&&) = default;
-  ADIS16448_IMU& operator=(ADIS16448_IMU&&) = default;
-  
-  /**
-   * Initialize the IMU.
-   *
-   * Perform gyro offset calibration by collecting data for a number of seconds and 
-   * computing the center value. The center value is subtracted from subsequent
-   * measurements. 
-   *
-   * It's important to make sure that the robot is not moving while the
-   * centering calculations are in progress, this is typically done when the
-   * robot is first turned on while it's sitting at rest before the match
-   * starts.
-   * 
-   * The calibration routine can be triggered by the user during runtime.
-   */
-  void Calibrate() override;
+    ADIS16448_IMU(ADIS16448_IMU&&) = default;
+    ADIS16448_IMU& operator=(ADIS16448_IMU&&) = default;
+    
+    /**
+     * Initialize the IMU.
+     *
+     * Perform gyro offset calibration by collecting data for a number of seconds and 
+     * computing the center value. The center value is subtracted from subsequent
+     * measurements. 
+     *
+     * It's important to make sure that the robot is not moving while the
+     * centering calculations are in progress, this is typically done when the
+     * robot is first turned on while it's sitting at rest before the match
+     * starts.
+     * 
+     * The calibration routine can be triggered by the user during runtime.
+     */
+    void Calibrate() override;
 
-  /**
-   * Reset the gyro.
-   *
-   * Resets the gyro accumulations to a heading of zero. This can be used if 
-   * there is significant drift in the gyro and it needs to be recalibrated
-   * after running.
-   */
-  void Reset() override;
+    /**
+     * Reset the gyro.
+     *
+     * Resets the gyro accumulations to a heading of zero. This can be used if 
+     * there is significant drift in the gyro and it needs to be recalibrated
+     * after running.
+     */
+    void Reset() override;
 
-  /**
-   * Return the actual angle in degrees that the robot is currently facing.
-   *
-   * The angle is based on the current accumulator value corrected by
-   * offset calibration and built-in IMU calibration. The angle is continuous, 
-   * that is it will continue from 360->361 degrees. This allows algorithms 
-   * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-   * from 360 to 0 on the second time around. The axis returned by this 
-   * function is adjusted fased on the configured yaw_axis.
-   *
-   * @return the current heading of the robot in degrees. This heading is based
-   *         on integration of the returned rate from the gyro.
-   */
-  double GetAngle() const override;
+    /**
+     * Return the actual angle in degrees that the robot is currently facing.
+     *
+     * The angle is based on the current accumulator value corrected by
+     * offset calibration and built-in IMU calibration. The angle is continuous, 
+     * that is it will continue from 360->361 degrees. This allows algorithms 
+     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
+     * from 360 to 0 on the second time around. The axis returned by this 
+     * function is adjusted fased on the configured yaw_axis.
+     *
+     * @return the current heading of the robot in degrees. This heading is based
+     *         on integration of the returned rate from the gyro.
+     */
+    double GetAngle() const override;
 
-  /**
-   * Return the rate of rotation of the yaw_axis gyro.
-   *
-   * The rate is based on the most recent reading of the gyro value
-   *
-   * @return the current rate in degrees per second
-   */
-  double GetRate() const override;
-  
-  /**
-   * Return the IMU X-axis integrated angle in degrees.
-   *
-   * The angle is based on the current accumulator value corrected by
-   * offset calibration and built-in IMU calibration. The angle is continuous, 
-   * that is it will continue from 360->361 degrees. This allows algorithms 
-   * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-   * from 360 to 0 on the second time around. 
-   *
-   * @return the current accumulated value of the X-axis in degrees. 
-   */
-  double GetAngleX() const;
+    /**
+     * Return the rate of rotation of the yaw_axis gyro.
+     *
+     * The rate is based on the most recent reading of the gyro value
+     *
+     * @return the current rate in degrees per second
+     */
+    double GetRate() const override;
+    
+    /**
+     * Return the IMU X-axis integrated angle in degrees.
+     *
+     * The angle is based on the current accumulator value corrected by
+     * offset calibration and built-in IMU calibration. The angle is continuous, 
+     * that is it will continue from 360->361 degrees. This allows algorithms 
+     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
+     * from 360 to 0 on the second time around. 
+     *
+     * @return the current accumulated value of the X-axis in degrees. 
+     */
+    double GetAngleX() const;
 
-  /**
-   * Return the IMU Y-axis integrated angle in degrees.
-   *
-   * The angle is based on the current accumulator value corrected by
-   * offset calibration and built-in IMU calibration. The angle is continuous, 
-   * that is it will continue from 360->361 degrees. This allows algorithms 
-   * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-   * from 360 to 0 on the second time around. 
-   *
-   * @return the current accumulated value of the Y-axis in degrees. 
-   */
-  double GetAngleY() const;
+    /**
+     * Return the IMU Y-axis integrated angle in degrees.
+     *
+     * The angle is based on the current accumulator value corrected by
+     * offset calibration and built-in IMU calibration. The angle is continuous, 
+     * that is it will continue from 360->361 degrees. This allows algorithms 
+     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
+     * from 360 to 0 on the second time around. 
+     *
+     * @return the current accumulated value of the Y-axis in degrees. 
+     */
+    double GetAngleY() const;
 
-  /**
-   * Return the IMU Z-axis integrated angle in degrees.
-   *
-   * The angle is based on the current accumulator value corrected by
-   * offset calibration and built-in IMU calibration. The angle is continuous, 
-   * that is it will continue from 360->361 degrees. This allows algorithms 
-   * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-   * from 360 to 0 on the second time around. 
-   *
-   * @return the current accumulated value of the Z-axis in degrees. 
-   */
-  double GetAngleZ() const;
+    /**
+     * Return the IMU Z-axis integrated angle in degrees.
+     *
+     * The angle is based on the current accumulator value corrected by
+     * offset calibration and built-in IMU calibration. The angle is continuous, 
+     * that is it will continue from 360->361 degrees. This allows algorithms 
+     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
+     * from 360 to 0 on the second time around. 
+     *
+     * @return the current accumulated value of the Z-axis in degrees. 
+     */
+    double GetAngleZ() const;
 
-  /**
-   * Return the rate of rotation of the X-axis gyro.
-   *
-   * The rate is based on the most recent reading of the gyro value
-   *
-   * @return the current rate of the X-axis gyro in degrees per second
-   */
-  double GetRateX() const;
+    /**
+     * Return the rate of rotation of the X-axis gyro.
+     *
+     * The rate is based on the most recent reading of the gyro value
+     *
+     * @return the current rate of the X-axis gyro in degrees per second
+     */
+    double GetRateX() const;
 
-  /**
-   * Return the rate of rotation of the Y-axis gyro.
-   *
-   * The rate is based on the most recent reading of the gyro value
-   *
-   * @return the current rate of the Y-axis gyro in degrees per second
-   */
-  double GetRateY() const;
+    /**
+     * Return the rate of rotation of the Y-axis gyro.
+     *
+     * The rate is based on the most recent reading of the gyro value
+     *
+     * @return the current rate of the Y-axis gyro in degrees per second
+     */
+    double GetRateY() const;
 
-  /**
-   * Return the rate of rotation of the Z-axis gyro.
-   *
-   * The rate is based on the most recent reading of the gyro value
-   *
-   * @return the current rate of the Z-axis gyro in degrees per second
-   */
-  double GetRateZ() const;
+    /**
+     * Return the rate of rotation of the Z-axis gyro.
+     *
+     * The rate is based on the most recent reading of the gyro value
+     *
+     * @return the current rate of the Z-axis gyro in degrees per second
+     */
+    double GetRateZ() const;
 
-  /**
-   * Return acceleration of the X-axis accelerometer.
-   *
-   * The acceleration measurement is based on the most recent reading of 
-   * the accelerometer value.
-   *
-   * @return the current acceleration of the X-axis accelerometer in g's
-   */
-  double GetAccelX() const;
+    /**
+     * Return acceleration of the X-axis accelerometer.
+     *
+     * The acceleration measurement is based on the most recent reading of 
+     * the accelerometer value.
+     *
+     * @return the current acceleration of the X-axis accelerometer in g's
+     */
+    double GetAccelX() const;
 
-  /**
-   * Return acceleration of the Y-axis accelerometer.
-   *
-   * The acceleration measurement is based on the most recent reading of 
-   * the accelerometer value.
-   *
-   * @return the current acceleration of the Y-axis accelerometer in g's
-   */
-  double GetAccelY() const;
+    /**
+     * Return acceleration of the Y-axis accelerometer.
+     *
+     * The acceleration measurement is based on the most recent reading of 
+     * the accelerometer value.
+     *
+     * @return the current acceleration of the Y-axis accelerometer in g's
+     */
+    double GetAccelY() const;
 
-  /**
-   * Return acceleration of the Z-axis accelerometer.
-   *
-   * The acceleration measurement is based on the most recent reading of 
-   * the accelerometer value.
-   *
-   * @return the current acceleration of the Z-axis accelerometer in g's
-   */
-  double GetAccelZ() const;
+    /**
+     * Return acceleration of the Z-axis accelerometer.
+     *
+     * The acceleration measurement is based on the most recent reading of 
+     * the accelerometer value.
+     *
+     * @return the current acceleration of the Z-axis accelerometer in g's
+     */
+    double GetAccelZ() const;
 
-  /**
-   * Return magnetic field intensity of the X-axis magnetometer.
-   *
-   * The megnetic field intensity measurement is based on the most recent reading of 
-   * the magnetometer value.
-   *
-   * @return the current magnetic field intensity of the X-axis magnetometer in mgauss
-   */
-  double GetMagX() const;
+    /**
+     * Return magnetic field intensity of the X-axis magnetometer.
+     *
+     * The megnetic field intensity measurement is based on the most recent reading of 
+     * the magnetometer value.
+     *
+     * @return the current magnetic field intensity of the X-axis magnetometer in mgauss
+     */
+    double GetMagX() const;
 
-  /**
-   * Return magnetic field intensity of the Y-axis magnetometer.
-   *
-   * The megnetic field intensity measurement is based on the most recent reading of 
-   * the magnetometer value.
-   *
-   * @return the current magnetic field intensity of the Y-axis magnetometer in mgauss
-   */
-  double GetMagY() const;
+    /**
+     * Return magnetic field intensity of the Y-axis magnetometer.
+     *
+     * The megnetic field intensity measurement is based on the most recent reading of 
+     * the magnetometer value.
+     *
+     * @return the current magnetic field intensity of the Y-axis magnetometer in mgauss
+     */
+    double GetMagY() const;
 
-  /**
-   * Return magnetic field intensity of the Z-axis magnetometer.
-   *
-   * The megnetic field intensity measurement is based on the most recent reading of 
-   * the magnetometer value.
-   *
-   * @return the current magnetic field intensity of the Z-axis magnetometer in mgauss
-   */
-  double GetMagZ() const;
+    /**
+     * Return magnetic field intensity of the Z-axis magnetometer.
+     *
+     * The megnetic field intensity measurement is based on the most recent reading of 
+     * the magnetometer value.
+     *
+     * @return the current magnetic field intensity of the Z-axis magnetometer in mgauss
+     */
+    double GetMagZ() const;
 
-  /**
-   * Return the pitch angle measurement with reference to the yaw_axis configuration.
-   *
-   * The pitch angle measurement is based on a combination of gyroscope, accelerometer,
-   * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-   * angle accumulation WILL roll over.
-   *
-   * @return the pitch angle measurement with respect to the yaw_axis configuration in degrees
-   */
-  double GetPitch() const;
+    /**
+     * Return the pitch angle measurement with reference to the yaw_axis configuration.
+     *
+     * The pitch angle measurement is based on a combination of gyroscope, accelerometer,
+     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
+     * angle accumulation WILL roll over.
+     *
+     * @return the pitch angle measurement with respect to the yaw_axis configuration in degrees
+     */
+    double GetPitch() const;
 
-  /**
-   * Return the roll angle measurement with reference to the yaw_axis configuration.
-   *
-   * The roll angle measurement is based on a combination of gyroscope, accelerometer,
-   * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-   * angle accumulation WILL roll over.
-   *
-   * @return the roll angle measurement with respect to the yaw_axis configuration in degrees
-   */
-  double GetRoll() const;
+    /**
+     * Return the roll angle measurement with reference to the yaw_axis configuration.
+     *
+     * The roll angle measurement is based on a combination of gyroscope, accelerometer,
+     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
+     * angle accumulation WILL roll over.
+     *
+     * @return the roll angle measurement with respect to the yaw_axis configuration in degrees
+     */
+    double GetRoll() const;
 
-  /**
-   * Return the yaw angle measurement with reference to the yaw_axis configuration.
-   *
-   * The yaw angle measurement is based on a combination of gyroscope, accelerometer,
-   * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-   * angle accumulation WILL roll over.
-   *
-   * @return the yaw angle measurement with respect to the yaw_axis configuration in degrees
-   */
-  double GetYaw() const;
+    /**
+     * Return the yaw angle measurement with reference to the yaw_axis configuration.
+     *
+     * The yaw angle measurement is based on a combination of gyroscope, accelerometer,
+     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
+     * angle accumulation WILL roll over.
+     *
+     * @return the yaw angle measurement with respect to the yaw_axis configuration in degrees
+     */
+    double GetYaw() const;
 
-  /**
-   * Return the delta-time calculation.
-   *
-   * The delta-time value is calculated by subtracting the previous data timestamp from the
-   * current timestamp. 
-   *
-   * @return the delta-time calculation of each data capture in seconds
-   */
-  double Getdt() const;
+    /**
+     * Return the delta-time calculation.
+     *
+     * The delta-time value is calculated by subtracting the previous data timestamp from the
+     * current timestamp. 
+     *
+     * @return the delta-time calculation of each data capture in seconds
+     */
+    double Getdt() const;
 
-  /**
-   * Return barometric pressure as measured by the IMU.
-   *
-   * The barometric pressure measurement is based on the most recent reading of the barometer.
-   * Note that the barometer is updated slower than the rest of the sensors (51.2 sps)
-   * 
-   * @return the current barometric pressure in mbar
-   */
-  double GetBarometricPressure() const;
+    /**
+     * Return IMU status.
+     *
+     * IMU status can be deciphered by referring to the DIAG_STAT (Table 31) in the ADIS16448 datasheet.
+     * 
+     * @return the status code read from the IMU
+     */
+    double GetStatus() const;
 
-  /**
-   * Return temperature as measured by the IMU.
-   *
-   * The temperature measurement is based on the most recent reading of the temperature sensor
-   * built in to the inertial sensors. 
-   * 
-   * @return the current temperature in degrees C
-   */
-  double GetTemperature() const;
+    /**
+     * Return barometric pressure as measured by the IMU.
+     *
+     * The barometric pressure measurement is based on the most recent reading of the barometer.
+     * Note that the barometer is updated slower than the rest of the sensors (51.2 sps)
+     * 
+     * @return the current barometric pressure in mbar
+     */
+    double GetBarometricPressure() const;
 
-  /**
-   * Return quaternions used for AHRS calculations.
-   * 
-   * @return the quaternion used in AHRS calculations
-   */
-  double GetQuaternionW() const;
-  double GetQuaternionX() const;
-  double GetQuaternionY() const;
-  double GetQuaternionZ() const;
+    /**
+     * Return temperature as measured by the IMU.
+     *
+     * The temperature measurement is based on the most recent reading of the temperature sensor
+     * built in to the inertial sensors. 
+     * 
+     * @return the current temperature in degrees C
+     */
+    double GetTemperature() const;
 
-  /**
-   * Enable/Disable yaw tilt compensation for the Complementary AHRS.
-   * 
-   * It is likely best to set yaw tilt compensation to false if the yaw
-   * value is to be used as feedback in a closed-loop control application. 
-   * The tradeoff is that yaw will only be accurate while the robot is level.
-   * 
-   * Note that this setting has no effect when using the Madgwick AHRS calculation method.
-   */
-  void SetTiltCompYaw(bool enabled);
+    /**
+     * Return quaternions used for AHRS calculations.
+     * 
+     * @return the quaternion used in AHRS calculations
+     */
+    double GetQuaternionW() const;
+    double GetQuaternionX() const;
+    double GetQuaternionY() const;
+    double GetQuaternionZ() const;
 
-  void InitSendable(SendableBuilder& builder) override;
+    /**
+     * Enable/Disable yaw tilt compensation for the Complementary AHRS.
+     * 
+     * It is likely best to set yaw tilt compensation to false if the yaw
+     * value is to be used as feedback in a closed-loop control application. 
+     * The tradeoff is that yaw will only be accurate while the robot is level.
+     * 
+     * Note that this setting has no effect when using the Madgwick AHRS calculation method.
+     */
+    void SetTiltCompYaw(bool enabled);
 
- private:
+    void InitSendable(SendableBuilder& builder) override;
+
+private:
   // Sample from the IMU
   struct Sample {
     double gyro_x;
@@ -338,6 +347,7 @@ class ADIS16448_IMU : public GyroBase {
     double mag_z;
     double baro;
     double temp;
+    double status;
     double dt;
 
     // Swap axis as appropriate for yaw axis selection
@@ -374,7 +384,8 @@ class ADIS16448_IMU : public GyroBase {
   double m_mag_z = 0.0;
   double m_baro = 0.0;
   double m_temp = 0.0;
-  double dt = 0.0;
+  double m_status = 0.0;
+  double m_dt = 0.0;
 
   // Accumulated gyro values (for offset calculation)
   int m_accum_count = 0;
