@@ -1,7 +1,7 @@
 plugins {
     id "cpp"
     id "google-test-test-suite"
-    id "edu.wpi.first.GradleRIO" version "2019.1.1-beta-4"
+    id "edu.wpi.first.GradleRIO" version "2019.1.1"
 }
 
 def includeSrcInIncludeRoot = false
@@ -28,4 +28,27 @@ model {
         }
     }
 
+}
+
+model {
+    components {
+        adis16448imu(NativeLibrarySpec) {
+            targetPlatform wpi.platforms.roborio
+
+            sources.cpp {
+                source {
+                    srcDir 'src/main/cpp'
+                }
+                exportedHeaders {
+                    srcDir 'src/main/include'
+                    if (includeSrcInIncludeRoot) {
+                        srcDir 'src/main/cpp'
+                    }
+                }
+            }
+
+            // Defining my dependencies. In this case, WPILib
+            useLibrary(it, "wpilib")
+        }
+    }
 }

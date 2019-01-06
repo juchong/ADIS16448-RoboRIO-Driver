@@ -14,6 +14,10 @@
 #include <frc/DigitalInput.h>
 #include <frc/DigitalSource.h>
 #include <frc/DriverStation.h>
+#include <frc/DigitalOutput.h>
+#include <frc/DigitalSource.h>
+#include <frc/DigitalInput.h>
+#include <frc/SPI.h>
 #include <frc/ErrorBase.h>
 #include <ADIS16448_IMU.h>
 #include <frc/smartdashboard/SendableBuilder.h>
