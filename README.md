@@ -1,5 +1,7 @@
 # ADIS16448 IMU Library for FIRST Robotics and the RoboRIO
 
+## ***FRC TEAMS, PLEASE BE AWARE THAT THE 2019 KICKOFF RELEASE IMAGE BREAKS COMPATIBILITY WITH ADI IMUs! WE ARE WORKING WITH NI TO FIX THE BUG INTRODUCED BETWEEN BETA 3 AND KICKOFF RELEASE.***
+
 ## Introduction
 This example library was written to give mentors, students, and engineers a starting point for using a very high-performance 10 Degree-of-Freedom (DoF), calibrated Inertial Measurement Unit (IMU). This sensor packages gyroscopes, accelerometers, magnetometers, and a barometer in a small, robust package perfect for high performance robotics (such as FRC). 
 
