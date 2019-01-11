@@ -488,7 +488,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     double dt = 0; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
     int data_subset[] = new int[28];
     long timestamp_new = 0;
-    double data_to_read = 0;
+    int data_to_read = 0;
 
     while (!m_freed.get()) {
       // Waiting for the buffer to fill...
@@ -497,7 +497,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   	  data_count = m_spi.readAutoReceivedData(readBuf,0,0); // Read number of bytes currently stored in the buffer
   	  array_offset = data_count % 116; // Look for "extra" data This is 116 not 29 like in C++ b/c everything is 32-bits and takes up 4 bytes in the buffer
       data_to_read = data_count - array_offset; // Discard "extra" data
-  	  m_spi.readAutoReceivedData(readBuf,data_count,0); // Read data from DMA buffer
+  	  m_spi.readAutoReceivedData(readBuf,data_to_read,0); // Read data from DMA buffer
   	  for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)
 		    for(int j = 0; j < 28; j++) { // Split each set of 28 bytes into a sub-array for processing
 			    data_subset[j] = readBuf.getInt(4 + (i + j) * 4); // (i + j) * 4 = position in  buffer + 4 to skip timestamp
