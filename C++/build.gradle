@@ -1,8 +1,7 @@
 plugins {
     id "cpp"
-    id "google-test-test-suite"
+	id 'maven-publish'
     id "edu.wpi.first.GradleRIO" version "2019.1.1"
-	id 'maven'
 }
 
 def includeSrcInIncludeRoot = false

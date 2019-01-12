@@ -23,3 +23,9 @@ pluginManagement {
         }
     }
 }
+
+
+rootProject.name = 'ADIS16448_IMU'
+
+include 'Java'
+include 'C++'
