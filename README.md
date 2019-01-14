@@ -1,6 +1,6 @@
 # ADIS16448 IMU Library for FIRST Robotics and the RoboRIO
 
-## ***FRC TEAMS, PLEASE BE AWARE THAT THE 2019 KICKOFF RELEASE IMAGE BREAKS COMPATIBILITY WITH ADI IMUs! A UTILITY THAT AUTOMATICALLY PERFORMS THE WORKAROUND DESCRIBED ON THE WPILIB SCREENSTEPS PAGE IS AVAILABLE [HERE](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases/download/2019.r1/RoboRIODriverUpdateUtility.exe).***
+## ***FRC TEAMS, PLEASE BE AWARE THAT THE 2019 KICKOFF RELEASE IMAGE BREAKS COMPATIBILITY WITH ADI GYROS and IMUs! A UTILITY THAT AUTOMATICALLY PERFORMS THE WORKAROUND DESCRIBED ON THE WPILIB SCREENSTEPS PAGE IS AVAILABLE [HERE](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases/download/2019.r1/RoboRIODriverUpdateUtility.exe).***
 
 ## ***As described on the [WPI Known Issues](https://wpilib.screenstepslive.com/s/currentCS/m/getting_started/l/1028964-known-issues) page, the issue can be resolved by logging in to your RoboRIO via serial or SSH terminal as admin (password blank, usually), and executing the command "updateNIDrivers" without quotes. Note that this command is case sensitive. Future updates will resolve this issue and this step is only required to be executed once after re-imaging your RoboRIO with the kickoff image. If you run into any issues, please submit an issue ticket and we will reach out as quickly as possible.***
 
