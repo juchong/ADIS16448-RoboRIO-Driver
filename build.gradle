@@ -4,3 +4,14 @@ allprojects {
 		mavenCentral()
     }
 }
+
+subprojects{
+	publishing {
+		repositories {
+			maven {
+				println rootProject.path.toString() 
+				url = rootProject.projectDir.toString() + "/maven"
+			}
+		}
+	}
+}

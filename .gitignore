@@ -18,6 +18,8 @@ local.properties
 .cproject
 -.classpath
 
+maven/
+
 *.class
 
 *.jar
