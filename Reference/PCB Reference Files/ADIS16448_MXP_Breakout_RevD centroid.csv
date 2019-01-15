@@ -1,0 +1,18 @@
+Screaming Circuits SMD component position file.
+
+Centroid Data for pc board: "ADIS16448_MXP_Breakout_RevD.brd" as of: 10/15/2018 12:34 PM
+Measurements are in inches. Comma delimited
+Only surface mount components included
+
+RefDes,Layer,LocationX,LocationY,Rotation
+C1,Top,1.151,0.799,0
+C2,Top,1.151,0.699,0
+D1,Top,0.600,0.390,270
+D2,Top,0.600,0.560,270
+R1,Top,1.381,0.749,270
+R2,Top,1.301,0.749,270
+R3,Top,0.851,0.749,270
+R4,Top,0.931,0.749,270
+R5,Top,0.450,0.390,180
+R6,Top,0.450,0.560,180
+U1,Top,1.116,0.899,0
