@@ -1,14 +1,22 @@
 # Java Instructions
 
-## Gradle Install
-As this driver depends on WPILib, we strongly recommend any team using gradle to use [GradleRIO](https://github.com/Open-RIO/GradleRIO)
-* Add [JitPack](https://jitpack.io/#juchong/ADIS16448-RoboRIO-Driver) to your `repositories` block: ``maven { url 'https://jitpack.io' }``
-* Add ``compile 'com.github.juchong:ADIS16448-RoboRIO-Driver:master-SNAPSHOT'`` to your `dependencies` block (this will always be the most recent version, see jitpack for more details)
+## Install
+### Online Install
+- Open Visual Studio Code
+- Click the WPILib command pallete icon
+- Select Manage Vendor Libraries
+- Choose Install new libraries (online)
+- Paste the following link: [http://maven.highcurrent.io/vendordeps/ADIS16448.json](http://maven.highcurrent.io/vendordeps/ADIS16448.json)
 
-Your gradle build file will end up looking something like this if you use GradleRIO: [build.gradle.example](build.gradle.example)
-
-## Manual Install
-* Copy the `com/analog/adis16448` package into your `src/` folder
+### Offline Install
+- Download the latest release zip from the [releases](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases) page on Github. The zip will be named `adis16448_roborio-[releaseversion].zip`.
+- Extract this zip to `~/home/frc2019/` (on windows `~/home` is `C:\Users\Public` so extract it to `C:\Users\Public\frc2019`).
+- If Visual Studio code is open close the current folder (File > Close Folder) the exit Visual Studio Code.
+- Open Visual Studio Code
+- Click the SPILb command pallete icon
+- Select Manage Vendor Libraries
+- Choose Install new libraries (offline)
+- Check ADIS16448 the click OK.
 
 ## Usage
 Make a new instance of the driver, and use it however you like. For example:

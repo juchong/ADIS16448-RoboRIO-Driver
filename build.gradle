@@ -29,7 +29,7 @@ task clean(type: Delete){
 // Add the correct version number to the template JSON file and place it in the vendordeps folder to be zipped
 task updateJSONVersion()  {
     mkdir vendordepsdir
-    def newJSON = new File(vendordepsdir + "/AIDS16448.json")
+    def newJSON = new File(vendordepsdir + "/ADIS16448.json")
     def templateJSON = new File(rootProject.projectDir.toString() + "/ADIS16448_template.json")
 
     newJSON.withWriter { def writer ->

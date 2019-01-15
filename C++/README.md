@@ -1,9 +1,22 @@
 # C++ Instructions
 
 ## Install
-These steps assume you already have a working WPILib based C++ project working. If you are starting from scratch, see the [WPILib instructions](https://wpilib.screenstepslive.com/s/currentCS/m/cpp)
-* Copy `ADIS16448_IMU.cpp` and `ADIS16448_IMU.h` into your _src/main/cpp/_ folder
-* Change `includeSrcInIncludeRoot` within `build_grade` to `true`
+### Online Install
+- Open Visual Studio Code
+- Click the WPILib command pallete icon
+- Select Manage Vendor Libraries
+- Choose Install new libraries (online)
+- Paste the following link: [http://maven.highcurrent.io/vendordeps/ADIS16448.json](http://maven.highcurrent.io/vendordeps/ADIS16448.json)
+
+### Offline Install
+- Download the latest release zip from the [releases](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases) page on Github. The zip will be named `adis16448_roborio-[releaseversion].zip`.
+- Extract this zip to `~/home/frc2019/` (on windows `~/home` is `C:\Users\Public` so extract it to `C:\Users\Public\frc2019`).
+- If Visual Studio code is open close the current folder (File > Close Folder) the exit Visual Studio Code.
+- Open Visual Studio Code
+- Click the SPILb command pallete icon
+- Select Manage Vendor Libraries
+- Choose Install new libraries (offline)
+- Check ADIS16448 the click OK.
 
 ## Usage
 Make a new instance of the driver, and use it however you like. For example:
