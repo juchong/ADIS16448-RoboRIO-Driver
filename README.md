@@ -28,10 +28,14 @@ Your RoboRIO should be imaged to match the version of the NI Update Suite instal
 
 ![ADIS16448 Breakout Board Installed on a RoboRIO](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/IMG_5514.JPG)
 
-
 ## How do I use the IMU with my programming language?
 
 Click on the language you're looking to use above. Each folder includes instructions specific to the language specified. If you're looking for more information on using the sensor, be sure to check out the [ADI FIRST Robotics Wiki Page](https://wiki.analog.com/first/first_robotics_donation_resources).
+
+## Can I order my own PCB? Where can I find the schematic?
+
+The schematic, layout, and manufacturing files can be found in this repository under `Reference/PCB Reference Files/`. 
+Copies of this board may be purchased from OSH Park using this [link](https://oshpark.com/shared_projects/G8nquDEx). 
 
 ## A Shout-Out to the RoboBees
 
