@@ -1,21 +1,8 @@
-UPDATE VERSIONS IN BOTH JAVA AND C++ BUILD.GRADLE FILES AND IN THE JSON FILE BEFORE BUILDING AND PUBLISHING!!!
+- Update the version number in the root build.gradle (libraryVersion property)
+- Run gradlew publish
+    - Generate a JSON with the correct version (based on the template)
+    - This will build the java and c++ versionss
+    - Generate maven artifacts for both
+    - Create a release zip of the json and maven artifacts
 
-Build before publishing or zip files will not be found.
-.\gradlew build
-      or
-.\gradlew component:build
-      where component is java or c++
-
-Then publish
-.\gradlew publish
-     or
-.\gradlew component:publish
-
-The artifacts to be published to maven are in the maven directory (of the root project)
-The contents of maven need to be copied to ~/frc2019/maven (or C:\Users\Public\frc2019\maven)
-The ADIS16448.json (in vendordeps) file needs to be copied to ~/frc2019/vendordeps (or C:\Users\Public\frc2019\vendordeps)
-
-The library can then be added to a project with visual studio code's manage vendor libraries feature. 
-
-Copy the contents of the build/maven-release to maven.juanjchong.com/release directory
-Copy the json to maven.juanjchong.com/
+Copy the contents of the zip to the maven repo (maven.highcurrent.io)

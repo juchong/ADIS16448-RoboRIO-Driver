@@ -6,10 +6,7 @@ plugins {
 
 def includeSrcInIncludeRoot = false
 
-def group = 'com.github.juchong'
-def groupDir = 'com/github/juchong'
 def baseArchiveName = 'adis16448'
-def libVersion = '2019.1.1'
 
 task headersZip(type: Zip) {
     destinationDir = file("build/zips")
@@ -53,6 +50,13 @@ task zipStaticLibraryDebug(type: Zip){
     }
 }
 
+// Make sure build completes before trying to make a zip of the built libraries
+zipSharedLibrary.dependsOn build
+zipStaticLibrary.dependsOn build
+zipSharedLibraryDebug.dependsOn build
+zipStaticLibraryDebug.dependsOn build
+headersZip.dependsOn build
+
 model {
     components {
         adis16448imu(NativeLibrarySpec) {
@@ -82,7 +86,7 @@ model {
 				artifact zipSharedLibraryDebug
 				artifact zipStaticLibraryDebug
                 artifactId = "adis16448-cpp"
-                groupId group
+                groupId publishGroup
                 version libVersion
             }
         }

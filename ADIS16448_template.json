@@ -1,7 +1,7 @@
 {
     "fileName": "ADIS16448.json",
     "name": "ADIS16448-IMU",
-    "version": "2019.1.1",
+    "version": __VERSION_HERE__,
     "uuid": "38c21ab6-aa8b-44bc-b844-8086c77f09ec",
     "mavenUrls": [
         "http://maven.highcurrent.io/maven"

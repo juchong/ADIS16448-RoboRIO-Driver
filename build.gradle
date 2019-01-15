@@ -5,13 +5,56 @@ allprojects {
     }
 }
 
+def mavenrepo = rootProject.projectDir.toString() + "/build/maven"
+def vendordepsdir = rootProject.projectDir.toString() + "/build/vendordeps"
+def libraryVersion = "2019-r1"
+def publishGroupId = 'com.github.juchong'
+
 subprojects{
+	ext.libVersion = libraryVersion
+    ext.publishGroup = publishGroupId
 	publishing {
 		repositories {
 			maven {
-				println rootProject.path.toString() 
-				url = rootProject.projectDir.toString() + "/maven"
+				url = mavenrepo
 			}
 		}
 	}
 }
+
+task clean(type: Delete){
+    delete "build"
+}
+
+// Add the correct version number to the template JSON file and place it in the vendordeps folder to be zipped
+task updateJSONVersion()  {
+    mkdir vendordepsdir
+    def newJSON = new File(vendordepsdir + "/AIDS16448.json")
+    def templateJSON = new File(rootProject.projectDir.toString() + "/ADIS16448_template.json")
+
+    newJSON.withWriter { def writer ->
+        templateJSON.eachLine { def line ->
+            def newLine = line.replace("__VERSION_HERE__", '"' + libraryVersion + '"')
+            writer.write(newLine + "\n");
+        }
+    }
+}
+
+// Generate a zip file (with correct directory structure for )
+task generateReleaseZip(type: Zip){
+
+    subprojects.each { dependsOn("${it.name}:publish") }
+
+    destinationDir = file("build")
+    baseName = "adis16448imu_roborio"
+    classifier = libraryVersion
+    from(mavenrepo) {
+        into 'maven'
+    }
+    from(vendordepsdir){
+        into 'vendordeps'
+    }
+}
+
+publish.dependsOn updateJSONVersion
+publish.dependsOn generateReleaseZip

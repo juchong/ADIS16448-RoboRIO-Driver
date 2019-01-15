@@ -4,10 +4,6 @@ plugins {
 	id "maven-publish"
 }
 
-def group = "com.github.juchong"
-def groupDir = "com/github/juchong"
-def libVersion = '2019.1.1'
-
 // Maven central needed for JUnit
 repositories {
     mavenCentral()
@@ -44,7 +40,7 @@ model{
 				artifact sourcesJar
 				artifact javadocJar
 				artifactId = "adis16448-java"
-                groupId group
+                groupId publishGroup
                 version libVersion
 			}
 		}
