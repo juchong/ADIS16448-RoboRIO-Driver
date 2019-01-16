@@ -11,7 +11,7 @@
         {
             "groupId": "com.github.juchong",
             "artifactId": "adis16448-java",
-            "version": "2019.1.1"
+            "version": __VERSION_HERE__
         }
     ],
     "jniDependencies": [],
@@ -19,7 +19,7 @@
         {
             "groupId": "com.github.juchong",
             "artifactId": "adis16448-cpp",
-            "version": "2019.1.1",
+            "version": __VERSION_HERE__,
             "libName": "libadis16448imu",
             "headerClassifier": "headers",
             "sharedLibrary": false,
