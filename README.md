@@ -1,8 +1,6 @@
+## ***FRC TEAMS, BE AWARE THAT THE 2019 KICKOFF RELEASE IMAGE (v12) BREAKS COMPATIBILITY WITH ADI GYROS and IMUs! NI HAS RELEASED AN UPDATE SUITE (2019.1.0) ALONG WITH A NEW ROBORIO IMAGE (v13) THAT FIXES THE ISSUE. THE UPDATED INSTALLER CAN BE FOUND [HERE](http://www.ni.com/download/first-robotics-software-2017/7904/en/).***
+
 # ADIS16448 IMU Library for FIRST Robotics and the RoboRIO
-
-## ***FRC TEAMS, PLEASE BE AWARE THAT THE 2019 KICKOFF RELEASE IMAGE BREAKS COMPATIBILITY WITH ADI GYROS and IMUs! A UTILITY THAT AUTOMATICALLY PERFORMS THE WORKAROUND DESCRIBED ON THE WPILIB SCREENSTEPS PAGE IS AVAILABLE [HERE](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases/download/2019.r1/RoboRIODriverUpdateUtility.exe).***
-
-## ***As described on the [WPI Known Issues](https://wpilib.screenstepslive.com/s/currentCS/m/getting_started/l/1028964-known-issues) page, the issue can be resolved by logging in to your RoboRIO via serial or SSH terminal as admin (password blank, usually), and executing the command "updateNIDrivers" without quotes. Note that this command is case sensitive. Future updates will resolve this issue and this step is only required to be executed once after re-imaging your RoboRIO with the kickoff image. If you run into any issues, please submit an issue ticket and we will reach out as quickly as possible.***
 
 ## Introduction
 This example library was written to give mentors, students, and engineers a starting point for using a very high-performance 10 Degree-of-Freedom (DoF), calibrated Inertial Measurement Unit (IMU). This sensor packages gyroscopes, accelerometers, magnetometers, and a barometer in a small, robust package perfect for high performance robotics (such as FRC). 
@@ -14,6 +12,9 @@ These software libraries provide the user (you) with:
 - Offset compensation calculated at runtime
 
 Tutorial videos, how-to guides, and additional resources can be found on the [ADI FIRST Robotics Wiki Page](https://wiki.analog.com/first/first_robotics_donation_resources).
+
+## Why isn't your example code working?
+A bug was introduced in the 2019 kickoff RoboRIO image which broke "Auto SPI." All ADI sensors currently offered to FRC teams rely on this feature to synchronously capture IMU data and feed it to the Zynq CPU for processing. The source of the bug was traced back to a RoboRIO image packaging issue and could be temporarily resolved on a v12 image by connecting to the serial/SSH terminal on the RoboRIO and executing the command "updateNIDrivers". This command forces the RoboRIO to re-compile the affected kernel module and fully resolves the issue. As of 01/17/2019, NI has released an updated installer (2019.1.0) that includes a pre-patched RoboRIO image (v13).
 
 ## What programming languages are supported?
 The IMU driver currently supports all three official FRC languages (C++, Java, and LabVIEW). Raw sensor rate outputs, accumulated sensor outputs, and Kalman/Madgwick outputs are supported for all languages. 
