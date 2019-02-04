@@ -287,7 +287,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     }
 
     // Set IMU internal decimation to 102.4 SPS
-    writeRegister(kRegSMPL_PRD, 0x0001);
+    writeRegister(kRegSMPL_PRD, 0x0301);
 
     // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP) & PoP
     writeRegister(kRegMSC_CTRL, 0x0056);
@@ -492,19 +492,20 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 
     while (!m_freed.get()) {
       // Waiting for the buffer to fill...
-  	  Timer.delay(.020); // A delay less than 10ms could potentially overflow the local buffer
+  	  try{Thread.sleep(20);}catch(InterruptedException e){} // A delay less than 10ms could potentially overflow the local buffer
 
   	  data_count = m_spi.readAutoReceivedData(readBuf,0,0); // Read number of bytes currently stored in the buffer
-  	  array_offset = data_count % 116; // Look for "extra" data This is 116 not 29 like in C++ b/c everything is 32-bits and takes up 4 bytes in the buffer
+      array_offset = data_count % 116; // Look for "extra" data This is 116 not 29 like in C++ b/c everything is 32-bits and takes up 4 bytes in the buffer
       data_to_read = data_count - array_offset; // Discard "extra" data
-  	  m_spi.readAutoReceivedData(readBuf,data_to_read,0); // Read data from DMA buffer
-  	  for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)
-		    for(int j = 0; j < 28; j++) { // Split each set of 28 bytes into a sub-array for processing
-			    data_subset[j] = readBuf.getInt(4 + (i + j) * 4); // (i + j) * 4 = position in  buffer + 4 to skip timestamp
+      m_spi.readAutoReceivedData(readBuf,data_to_read,0); // Read data from DMA buffer
+      for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)        
+        for(int j = 1; j < 29; j++) { // Split each set of 28 bytes into a sub-array for processing
+          int at  = (i + 4 * (j));
+			    data_subset[j - 1] = readBuf.getInt(at);
         }
         
         // DEBUG: Print the received data
-        //printBytes(data_subset);
+        // printBytes(data_subset);
 
         // DEBUG: Plot Sub-Array Data in Terminal
         /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," + 
@@ -629,6 +630,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   private void calculate() {
     while (!m_freed.get()) {
       // Wait for next sample and get it
+      try{Thread.sleep(20);}catch(InterruptedException e){}
       Sample sample;
       m_samples_mutex.lock();
       try {
