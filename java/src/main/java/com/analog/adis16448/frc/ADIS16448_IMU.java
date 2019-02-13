@@ -382,7 +382,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     return buf[0] << 8 & buf[1];
   }
   static int ToUShort(int... data) {
-	  ByteBuffer buf = ByteBuffer.allocateDirect(data.length);
+	  ByteBuffer buf = ByteBuffer.allocate(data.length);
 	  for(int d : data) {
 		  buf.put((byte)d);
 	  }
