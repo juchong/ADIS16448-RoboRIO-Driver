@@ -96,7 +96,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	0x0A14, 0x1DDA, 0x05CB, 0x1205, 0x15AA, 0x0264, 0x1A75, 0x0DBB,
 	0x152B, 0x02E5, 0x1AF4, 0x0D3A, 0x0A95, 0x1D5B, 0x054A, 0x1284
 	};
-  
+
   // serial number and lot id
   //private int m_serial_num;
   //private int m_lot_id1;
@@ -272,9 +272,9 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     m_spi.setSampleDataOnFalling();
     m_spi.setClockActiveLow();
     m_spi.setChipSelectActiveLow();
-    
+
     readRegister(kRegPROD_ID); // dummy read
-    
+
     // Validate the product ID
     if (readRegister(kRegPROD_ID) != 16448) {
       m_spi.free();
@@ -305,19 +305,19 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // to the output while the lock is released).
     m_samples_mutex = new ReentrantLock();
     m_samples_not_empty = m_samples_mutex.newCondition();
-    
+
     m_samples = new Sample[kSamplesDepth + 2];
     for (int i=0; i<kSamplesDepth + 2; i++) {
       m_samples[i] = new Sample();
     }
-    
+
     // Configure interrupt on MXP DIO0
     m_interrupt = new DigitalInput(10);
     // Configure SPI bus for DMA read
     m_spi.initAuto(8200);
     m_spi.setAutoTransmitData(new byte[] {kGLOB_CMD},27);
     m_spi.startAutoTrigger(m_interrupt, true, false);
-    
+
     m_freed.set(false);
     m_acquire_task = new Thread(new AcquireTask(this));
     m_acquire_task.setDaemon(true);
@@ -327,9 +327,9 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     m_calculate_task = new Thread(new CalculateTask(this));
     m_calculate_task.setDaemon(true);
     m_calculate_task.start();
-    
+
     calibrate();
-    
+
     // Report usage and post data to DS
 
     HAL.report(tResourceType.kResourceType_ADIS16448, 0);
@@ -378,6 +378,9 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   static int ToUShort(ByteBuffer buf) {
 	  return (buf.getShort(0)) & 0xFFFF;
   }
+  static int ToUShort(byte[] buf) {
+    return buf[0] << 8 & buf[1];
+  }
   static int ToUShort(int... data) {
 	  ByteBuffer buf = ByteBuffer.allocateDirect(data.length);
 	  for(int d : data) {
@@ -385,7 +388,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	  }
 	  return ToUShort(buf);
   }
-  
+
   public static long ToULong(int sint) {
 		return sint & 0x00000000FFFFFFFFL;
 	}
@@ -396,12 +399,17 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   static int ToShort(ByteBuffer buf) {
 	  return ToShort(buf.get(0), buf.get(1));
   }
-  
+
+  static int ToShort(byte[] buf) {
+    return buf[0] << 8 | buf[1];
+  }
+
   private int readRegister(int reg) {
-    ByteBuffer buf = ByteBuffer.allocateDirect(2);
-    buf.order(ByteOrder.BIG_ENDIAN);
-    buf.put(0, (byte) (reg & 0x7f));
-    buf.put(1, (byte) 0);
+    //ByteBuffer buf = ByteBuffer.allocateDirect(2);
+    byte[] buf = new byte[2];
+    //buf.order(ByteOrder.BIG_ENDIAN);
+    buf[0] = (byte) (reg & 0x7f);
+    buf[1] = (byte) 0;
 
     m_spi.write(buf, 2);
     m_spi.read(false, buf, 2);
@@ -410,14 +418,15 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   }
 
   private void writeRegister(int reg, int val) {
-    ByteBuffer buf = ByteBuffer.allocateDirect(2);
+    //ByteBuffer buf = ByteBuffer.allocateDirect(2);
+    byte[] buf = new byte[2];
     // low byte
-    buf.put(0, (byte)((0x80 | reg) | 0x10));
-    buf.put(1, (byte) (val & 0xff));
+    buf[0] = (byte)((0x80 | reg) | 0x10);
+    buf[1] = (byte) (val & 0xff);
     m_spi.write(buf, 2);
     // high byte
-    buf.put(0, (byte) (0x81 | reg));
-    buf.put(1, (byte) (val >> 8));
+    buf[0] = (byte) (0x81 | reg);
+    buf[1] =(byte) (val >> 8);
     m_spi.write(buf, 2);
   }
 
@@ -479,14 +488,16 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   }
 
   private void acquire() {
-    ByteBuffer readBuf = ByteBuffer.allocateDirect(64000);
-    readBuf.order(ByteOrder.LITTLE_ENDIAN);
+    int[] readBuf = new int[2000];
+    //ByteBuffer readBuf = ByteBuffer.allocateDirect(64000);
+    //readBuf.order(ByteOrder.LITTLE_ENDIAN);
     double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp;
     int data_count = 0;
     int array_offset = 0;
     int imu_crc = 0;
     double dt = 0; // This number must be adjusted if decimation setting is changed. Default is 1/102.4 SPS
     int data_subset[] = new int[28];
+    byte bBuf[] = new byte[2];
     long timestamp_new = 0;
     int data_to_read = 0;
 
@@ -498,22 +509,22 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
       array_offset = data_count % 116; // Look for "extra" data This is 116 not 29 like in C++ b/c everything is 32-bits and takes up 4 bytes in the buffer
       data_to_read = data_count - array_offset; // Discard "extra" data
       m_spi.readAutoReceivedData(readBuf,data_to_read,0); // Read data from DMA buffer
-      for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)        
+      for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)
         for(int j = 1; j < 29; j++) { // Split each set of 28 bytes into a sub-array for processing
           int at  = (i + 4 * (j));
-			    data_subset[j - 1] = readBuf.getInt(at);
+			    data_subset[j - 1] = readBuf[at];//readBuf.getInt(at);
         }
-        
+
         // DEBUG: Print the received data
         // printBytes(data_subset);
 
         // DEBUG: Plot Sub-Array Data in Terminal
-        /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," + 
-        ToUShort(data_subset[4], data_subset[5]) + "," + ToUShort(data_subset[6], data_subset[7]) + "," + ToUShort(data_subset[8], data_subset[9]) + "," 
+        /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," +
+        ToUShort(data_subset[4], data_subset[5]) + "," + ToUShort(data_subset[6], data_subset[7]) + "," + ToUShort(data_subset[8], data_subset[9]) + ","
         + ToUShort(data_subset[10], data_subset[11]) + "," +
-        ToUShort(data_subset[12], data_subset[13]) + "," + ToUShort(data_subset[14], data_subset[15]) + "," 
+        ToUShort(data_subset[12], data_subset[13]) + "," + ToUShort(data_subset[14], data_subset[15]) + ","
         + ToUShort(data_subset[16], data_subset[17]) + "," +
-        ToUShort(data_subset[18], data_subset[19]) + "," + ToUShort(data_subset[20], data_subset[21]) + "," 
+        ToUShort(data_subset[18], data_subset[19]) + "," + ToUShort(data_subset[20], data_subset[21]) + ","
         + ToUShort(data_subset[22], data_subset[23]) + "," +
         ToUShort(data_subset[24], data_subset[25]) + "," + ToUShort(data_subset[26], data_subset[27]));*/
 
@@ -526,25 +537,26 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
           read_byte = data_subset[k]; // Process MSB
           calc_crc = (calc_crc >>> 8) ^ adiscrc[(calc_crc & 0x000000FF) ^ read_byte];
         }
-        
+
         // Make sure to mask all but relevant 16 bits
         calc_crc = ~calc_crc & 0xFFFF;
-        calc_crc = ((calc_crc << 8) | (calc_crc >> 8)) & 0xFFFF; 
+        calc_crc = ((calc_crc << 8) | (calc_crc >> 8)) & 0xFFFF;
         //System.out.println("Calc: " + calc_crc);
 
         // This is the data needed for CRC
-        ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
-        bBuf.put((byte)readBuf.getInt((i + 26) * 4 + 4)); // (i + 26) * 4 = position (32-bit ints) + 4 to skip timestamp
-        bBuf.put((byte)readBuf.getInt((i + 27) * 4 + 4)); // (i + 27) * 4 = position (32-bit ints) + 4 to skip timestamp
-        
+        //ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
+        //byte[] bBuf = new byte[2];
+        bBuf[0] = (byte)readBuf[(i + 26) * 4 + 4]; // (i + 26) * 4 = position (32-bit ints) + 4 to skip timestamp
+        bBuf[1] = (byte)readBuf[(i + 27) * 4 + 4]; // (i + 27) * 4 = position (32-bit ints) + 4 to skip timestamp
+
         imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
         //System.out.println("IMU: " + imu_crc);
         //System.out.println("------------");
-        
+
         // Compare calculated vs read CRC. Don't update outputs if CRC-16 is bad
         if(calc_crc == imu_crc) {
           // Calculate delta-time (dt) using FPGA timestamps
-          timestamp_new = ToULong(readBuf.getInt(i * 4));
+          timestamp_new = ToULong(readBuf[i * 4]);
           dt = (timestamp_new - timestamp_old)/1000000.0; // Calculate dt and convert us to seconds
           timestamp_old = timestamp_new; // Store new timestamp in old variable for next cycle
 
@@ -559,13 +571,13 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
           mag_z = ToShort(data_subset[20], data_subset[21]) * kMilligaussPerLSB;
           baro = ToUShort(data_subset[22], data_subset[23]) * kMillibarPerLSB;
           temp = ToShort(data_subset[24], data_subset[25]) * kDegCPerLSB + kDegCOffset;
-                  
+
           // Print scaled data to terminal
-          /*System.out.println(gyro_x + "," + gyro_y + "," + gyro_z + "," + accel_x + "," + accel_y + "," 
-          + accel_z + "," + mag_x + "," + mag_y + "," + mag_z + "," + baro + "," + temp + "," + "," 
+          /*System.out.println(gyro_x + "," + gyro_y + "," + gyro_z + "," + accel_x + "," + accel_y + ","
+          + accel_z + "," + mag_x + "," + mag_y + "," + mag_z + "," + baro + "," + temp + "," + ","
           + ToUShort(data_subset[26], data_subset[27]));*/
           //System.out.println("---------------------"); // Frame divider (or else data looks like a mess)
-          
+
           m_samples_mutex.lock();
           try{
             // If the FIFO is full, just drop it
@@ -618,7 +630,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
             m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
             m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
             m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
-            
+
           }
         }else{
           System.out.println("Invalid CRC");
@@ -691,7 +703,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
       double norm = Math.sqrt(ax * ax + ay * ay + az * az);
       if (norm > 0.3 && !excludeAccel) {
         // normal larger than the sensor noise floor during freefall
-        norm = 1.0 / norm; 
+        norm = 1.0 / norm;
         ax *= norm;
         ay *= norm;
         az *= norm;
@@ -853,7 +865,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // (Pitch, Roll, and Yaw).  This sensor fusion approach effectively
     // combines the individual sensor's best respective properties while
     // mitigating their shortfalls.
-    // 
+    //
     // Design:
     // The Complementary Filter is an algorithm that allows a pair of sensors
     // to contribute differently to a common, composite measurement result.
@@ -862,16 +874,16 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // to maintain the original unit of measurement.  It is computationally
     // inexpensive when compared to alternative estimation techniques such as
     // the Kalman filter.  The algorithm is given by:
-    // 
+    //
     // angle(n) = (alpha)*(angle(n-1) + gyrorate * dt) + (1-alpha)*(accel or mag);
-    // 
-    // where : 
-    // 
+    //
+    // where :
+    //
     // alpha = tau / (tau + dt)
-    // 
+    //
     // This implementation uses the average Gyro rate across the dt period, so
     // above gyrorate = [(gyrorate(n)-gyrorate(n-1)]/2
-    // 
+    //
     // Essentially, for Pitch and Roll, the slow moving (lower frequency) part
     // of the rotation estimate is taken from the Accelerometer - ignoring the
     // high noise level, and the faster moving (higher frequency) part is taken
@@ -885,16 +897,16 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // between the low and high pass filters.  Both tau and the sample time,
     // dt, affect the parameter 'alpha', which sets the balance point for how
     // much of which sensor is 'trusted' to contribute to the rotation estimate.
-    // 
+    //
     // The Complementary Filter algorithm is applied to each X/Y/Z rotation
     // axis to compute R/P/Y outputs, respectively.
-    // 
+    //
     // Magnetometer readings are tilt-compensated when Tilt-Comp-(Yaw) is
     // asserted (True), by the IMU TILT subVI.  This creates what is known as a
     // tilt-compensated compass, which allows Yaw to be insensitive to the
     // effects of a non-level sensor, but generates error in Yaw during
     // movement (coordinate acceleration).
-    // 
+    //
     // The Yaw "South" crossing detector is necessary to allow a smooth
     // transition across the +/- 180 deg discontinuity (inherent in the ATAN
     // function).  Since -180 deg is congruent with +180 deg, Yaw needs to jump
@@ -904,7 +916,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // and evaluates how far it is from the previous reading.  If it is greater
     // than the previous reading by the Discriminant (= 180 deg), then Yaw just
     // crossed South.
-    // 
+    //
     // By choosing 180 as the Discriminant, the only way the detector can
     // produce a false positive, assuming a loop iteration of 70 msec, is for
     // it to rotate >2,571 dps ... (2,571=180/.07).  This is faster than the ST
@@ -915,10 +927,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // crossing occurs.  The Modulus function cannot be used here as the
     // Complementary Filter algorithm has 'state' (needs to remember previous
     // Yaw).
-    // 
+    //
     // We are in effect stitching together two ends of a ruler for 'modular
     // arithmetic' (clock math).
-    // 
+    //
     // Inputs:
     // GYRO - Gyro rate and sample time measurements.
     // ACCEL - Acceleration measurements.
@@ -928,12 +940,12 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // TAU MAG - tau parameter used to set sensor balance between Mag and Gyro
     //           for Yaw.
     // TILT COMP (Yaw) - Enables Yaw tilt-compensation if True.
-    // 
+    //
     // Outputs:
     // ROLL - Filtered Roll about sensor X-axis.
     // PITCH - Filtered Pitch about sensor Y-axis.
     // YAW - Filtered Yaw about sensor Z-axis.
-    // 
+    //
     // Implementation:
     // It's best to establish the optimum loop sample time first.  See IMU READ
     // implementation notes for guidance.  Each tau parameter should then be
@@ -942,22 +954,22 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // each time until the result doesn't drift, but not so far that the result
     // gets noisy.  An optimum tau for this IMU is likely in the range of 1.0
     // to 0.01, for a loop sample time between 10 and 100 ms.
-    // 
+    //
     // Note that both sample timing (dt) and tau both affect the balance
     // parameter, 'alpha'.  Adjusting either dt or tau will require the other
     // to be readjusted to maintain a particular filter performance.
-    // 
+    //
     // It is likely best to set Yaw tilt-compensation to off (False) if the Yaw
     // value is to be used as feedback in a closed loop control application.
     // The tradeoff is that Yaw will only be accurate while the robot is level.
-    // 
+    //
     // Since a Yaw of -180 degrees is congruent with +180 degrees (they
     // represent the same direction), it is possible that the Yaw output will
     // oscillate between these two values when the sensor happens to be
     // pointing due South, as sensor noise causes slight variation.  You will
     // need to account for this possibility if you are using the Yaw value for
     // decision-making in code.
-    // 
+    //
     // ----- The RoboBees FRC Team 836! -----
     // Complement your passion to solve problems with a STEM Education!
 
@@ -992,26 +1004,26 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     // for derivation of Pitch and Roll equations.  Used eqs 37 & 38 as Rxyz.
     // Eqs 42 & 43, as Ryxz, produce same values within Pitch & Roll
     // constraints.
-    // 
+    //
     // Freescale's Pitch/Roll derivation is preferred over ST's as it does not
     // degrade due to the Sine function linearity assumption.
-    // 
+    //
     // Pitch is accurate over +/- 90 degree range, and Roll is accurate within
     // +/- 180 degree range - as long as accelerometer is only sensing
     // acceleration due to gravity.  Movement (coordinate acceleration) will
     // add error to Pitch and Roll indications.
-    // 
-    // Yaw is not obtainable from an accelerometer due to its geometric 
+    //
+    // Yaw is not obtainable from an accelerometer due to its geometric
     // relationship with the Earth's gravity vector.  (Would have same problem
     // on Mars.)
-    // 
+    //
     // see http://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
     // for derivation of Yaw equation.  Used eq 12 in Appendix A (eq 13 is
     // replaced by ATAN2 function).  Yaw is obtainable from the magnetometer,
     // but is sensitive to any tilt from horizontal.  This uses Pitch and Roll
     // values from above for tilt compensation of Yaw, resulting in a
     // tilt-compensated compass.
-    // 
+    //
     // As with Pitch/Roll, movement (coordinate acceleration) will add error to
     // Yaw indication.
 
@@ -1080,7 +1092,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     m_gyro_x_prev = sample.gyro_x;
     m_gyro_y_prev = sample.gyro_y;
     m_gyro_z_prev = sample.gyro_z;
-    
+
     // Update global state
     synchronized (this) {
       m_roll = roll;
@@ -1210,7 +1222,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
   public synchronized void setTiltCompYaw(boolean enabled) {
     m_tilt_comp_yaw = enabled;
   }
-  
+
   /**
    * {@inheritDoc}
    */
@@ -1227,5 +1239,5 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     builder.addDoubleProperty("AngleY", ()-> getAngleY(), null);
     builder.addDoubleProperty("AngleZ", ()-> getAngleZ(), null);
   }
-  
+
 }
