@@ -379,12 +379,12 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	  return (buf.getShort(0)) & 0xFFFF;
   }
   static int ToUShort(byte[] buf) {
-    return buf[0] << 8 & buf[1];
+    return (buf[0] << 8 | buf[1]) & 0xFFFF;
   }
   static int ToUShort(int... data) {
-	  ByteBuffer buf = ByteBuffer.allocate(data.length);
-	  for(int d : data) {
-		  buf.put((byte)d);
+	  byte[] buf = new byte[data.length];
+	  for(int i = 0; i < data.length; ++i) {
+		  buf[i] = (byte)data[i];
 	  }
 	  return ToUShort(buf);
   }
@@ -394,7 +394,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	}
 
   private static int ToShort(int... buf) {
-      return (short)(((short)buf[0]) << 8 | buf[1]);
+      return (buf[0] << 8 | buf[1]);
   }
   static int ToShort(ByteBuffer buf) {
 	  return ToShort(buf.get(0), buf.get(1));

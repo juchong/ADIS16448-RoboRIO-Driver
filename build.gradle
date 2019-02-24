@@ -7,7 +7,7 @@ allprojects {
 
 def mavenrepo = rootProject.projectDir.toString() + "/build/maven"
 def vendordepsdir = rootProject.projectDir.toString() + "/build/vendordeps"
-def libraryVersion = "2019-r1"
+def libraryVersion = "2019-r2"
 def publishGroupId = 'com.github.juchong'
 
 subprojects{
