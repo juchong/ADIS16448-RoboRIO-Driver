@@ -379,8 +379,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	  return (buf.getShort(0)) & 0xFFFF;
   }
   static int ToUShort(byte[] buf) {
-    return (buf[0] << 8 | buf[1]) & 0xFFFF;
-  }
+    return (((buf[0] & 0xFF) << 8) + ((buf[1] & 0xFF) << 0));
+  }  
   static int ToUShort(int... data) {
 	  byte[] buf = new byte[data.length];
 	  for(int i = 0; i < data.length; ++i) {
@@ -394,7 +394,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 	}
 
   private static int ToShort(int... buf) {
-      return (buf[0] << 8 | buf[1]);
+    return (short)(((buf[0] & 0xFF) << 8) + ((buf[1] & 0xFF) << 0));
   }
   static int ToShort(ByteBuffer buf) {
 	  return ToShort(buf.get(0), buf.get(1));
@@ -510,13 +510,14 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
       data_to_read = data_count - array_offset; // Discard "extra" data
       m_spi.readAutoReceivedData(readBuf,data_to_read,0); // Read data from DMA buffer
       for(int i = 0; i < data_to_read; i += 116) { // Process each set of 28 bytes (timestamp + 28 data) * 4 (32-bit ints)
+        
         for(int j = 1; j < 29; j++) { // Split each set of 28 bytes into a sub-array for processing
-          int at  = (i + 4 * (j));
+          int at  = (i + 1 * (j));
 			    data_subset[j - 1] = readBuf[at];//readBuf.getInt(at);
         }
 
         // DEBUG: Print the received data
-        // printBytes(data_subset);
+        //printBytes(data_subset);
 
         // DEBUG: Plot Sub-Array Data in Terminal
         /*System.out.println(ToUShort(data_subset[0], data_subset[1]) + "," + ToUShort(data_subset[2], data_subset[3]) + "," +
@@ -546,8 +547,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
         // This is the data needed for CRC
         //ByteBuffer bBuf = ByteBuffer.allocateDirect(2);
         //byte[] bBuf = new byte[2];
-        bBuf[0] = (byte)readBuf[(i + 26) * 4 + 4]; // (i + 26) * 4 = position (32-bit ints) + 4 to skip timestamp
-        bBuf[1] = (byte)readBuf[(i + 27) * 4 + 4]; // (i + 27) * 4 = position (32-bit ints) + 4 to skip timestamp
+        bBuf[0] = (byte)data_subset[26]; 
+        bBuf[1] = (byte)data_subset[27];
+
+        //System.out.println("Data: " + bBuf[0] + "," + bBuf[1]);
 
         imu_crc = ToUShort(bBuf); // Extract DUT CRC from data
         //System.out.println("IMU: " + imu_crc);
@@ -556,7 +559,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
         // Compare calculated vs read CRC. Don't update outputs if CRC-16 is bad
         if(calc_crc == imu_crc) {
           // Calculate delta-time (dt) using FPGA timestamps
-          timestamp_new = ToULong(readBuf[i * 4]);
+          timestamp_new = ToULong(readBuf[i]);
           dt = (timestamp_new - timestamp_old)/1000000.0; // Calculate dt and convert us to seconds
           timestamp_old = timestamp_new; // Store new timestamp in old variable for next cycle
 
