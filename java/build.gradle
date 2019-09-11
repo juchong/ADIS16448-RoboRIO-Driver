@@ -1,6 +1,6 @@
 plugins {
     id "java"
-    id "edu.wpi.first.GradleRIO" version "2019.1.1"
+    id "edu.wpi.first.GradleRIO" version "2020.0.0-alpha-2"
 	id "maven-publish"
 }
 
@@ -14,13 +14,6 @@ dependencies {
 }
 
 jar.baseName = "ADIS16448_IMU"
-
-// Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
-// in order to make them all available at runtime. Also adding the manifest so WPILib
-// knows where to look for our Robot Class.
-jar {
-    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-}
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'

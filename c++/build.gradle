@@ -1,8 +1,10 @@
 plugins {
     id "cpp"
 	id 'maven-publish'
-    id "edu.wpi.first.GradleRIO" version "2019.1.1"
+    id "edu.wpi.first.GradleRIO" version "2020.0.0-alpha-2"
 }
+
+nativeUtils.wpi.addWarningsAsErrors()
 
 def includeSrcInIncludeRoot = false
 
@@ -20,7 +22,7 @@ task headersZip(type: Zip) {
 task zipSharedLibrary(type: Zip){
 	destinationDir = file("build/zips")
     baseName = baseArchiveName
-    classifier = "linuxathenashared" 
+    classifier = "linuxathenashared"
     from('build/libs/adis16448imu/shared/release/') {
         into '/linux/athena/shared'
     }
@@ -36,7 +38,7 @@ task zipStaticLibrary(type: Zip){
 task zipSharedLibraryDebug(type: Zip){
 	destinationDir = file("build/zips")
     baseName = baseArchiveName
-    classifier = "linuxathenashareddebug" 
+    classifier = "linuxathenashareddebug"
     from('build/libs/adis16448imu/shared/debug/') {
         into '/linux/athena/shared'
     }
@@ -74,7 +76,7 @@ model {
             }
 
             // Defining my dependencies. In this case, WPILib
-            useLibrary(it, "wpilib")
+            wpi.deps.wpilib(it)
         }
     }
 	publishing {
