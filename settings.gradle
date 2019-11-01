@@ -30,6 +30,3 @@ pluginManagement {
 
 
 rootProject.name = 'ADIS16448_IMU'
-
-include 'java'
-include 'c++'

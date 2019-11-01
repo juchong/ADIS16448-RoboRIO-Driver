@@ -1,5 +1,5 @@
-- Update the version number in the root build.gradle (libraryVersion property)
-- Run gradlew publish
+- Update the version number in the root publish.gradle (pubVersion property)
+- Run gradlew generateReleaseZip
     - Generate a JSON with the correct version (based on the template)
     - This will build the java and c++ versionss
     - Generate maven artifacts for both

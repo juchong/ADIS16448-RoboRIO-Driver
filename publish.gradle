@@ -1,0 +1,210 @@
+apply plugin: 'maven-publish'
+
+ext.licenseFile = files("$rootDir/LICENSE.txt")
+
+def pubVersion = '2020-beta2'
+
+def outputsFolder = file("$buildDir/allOutputs")
+
+def versionFile = file("$outputsFolder/version.txt")
+
+task outputVersions() {
+    description = 'Prints the versions of wpilib to a file for use by the downstream packaging project'
+    group = 'Build'
+    outputs.files(versionFile)
+
+    doFirst {
+        buildDir.mkdir()
+        outputsFolder.mkdir()
+    }
+
+    doLast {
+        versionFile.write pubVersion
+    }
+}
+
+task libraryBuild() {}
+
+build.dependsOn outputVersions
+
+task copyAllOutputs(type: Copy) {
+    destinationDir outputsFolder
+}
+
+build.dependsOn copyAllOutputs
+copyAllOutputs.dependsOn outputVersions
+
+ext.addTaskToCopyAllOutputs = { task ->
+    copyAllOutputs.dependsOn task
+    copyAllOutputs.inputs.file task.archivePath
+    copyAllOutputs.from task.archivePath
+}
+
+def artifactGroupId = 'com.github.juchong'
+def baseArtifactId = 'adis16448'
+def zipBaseName = "_GROUP_com_github_juchong_ID_${baseArtifactId}-cpp_CLS"
+def javaBaseName = "_GROUP_com_github_juchong_ID_${baseArtifactId}-java_CLS"
+
+task cppHeadersZip(type: Zip) {
+    destinationDir = outputsFolder
+    baseName = zipBaseName
+    classifier = "headers"
+
+    from(licenseFile) {
+        into '/'
+    }
+
+    from('c++/src/main/include') {
+        into '/'
+    }
+}
+
+task cppSourceZip(type: Zip) {
+    destinationDir = outputsFolder
+    baseName = zipBaseName
+    classifier = "source"
+
+    from(licenseFile) {
+        into '/'
+    }
+
+    from('c++/src/main/cpp') {
+        into '/'
+    }
+}
+
+
+build.dependsOn cppHeadersZip
+addTaskToCopyAllOutputs(cppHeadersZip)
+build.dependsOn cppSourceZip
+addTaskToCopyAllOutputs(cppSourceZip)
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+task outputJar(type: Jar, dependsOn: classes) {
+    baseName javaBaseName
+    destinationDir outputsFolder
+    from sourceSets.main.output
+}
+
+task outputSourcesJar(type: Jar, dependsOn: classes) {
+    baseName javaBaseName
+    destinationDir outputsFolder
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task outputJavadocJar(type: Jar, dependsOn: javadoc) {
+    baseName javaBaseName
+    destinationDir outputsFolder
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives sourcesJar
+    archives javadocJar
+    archives outputJar
+    archives outputSourcesJar
+    archives outputJavadocJar
+}
+
+addTaskToCopyAllOutputs(outputSourcesJar)
+addTaskToCopyAllOutputs(outputJavadocJar)
+addTaskToCopyAllOutputs(outputJar)
+
+build.dependsOn outputSourcesJar
+build.dependsOn outputJavadocJar
+build.dependsOn outputJar
+
+libraryBuild.dependsOn build
+
+def releasesRepoUrl = "$buildDir/repos/releases"
+
+publishing {
+    repositories {
+        maven {
+
+            url = releasesRepoUrl
+        }
+    }
+}
+
+task cleanReleaseRepo(type: Delete) {
+    delete releasesRepoUrl
+}
+
+tasks.matching {it != cleanReleaseRepo}.all {it.dependsOn cleanReleaseRepo}
+
+model {
+    publishing {
+        def imuTaskList = createComponentZipTasks($.components, ['adis16448imu'], zipBaseName, Zip, project, includeStandardZipFormat)
+
+        publications {
+            cpp(MavenPublication) {
+                imuTaskList.each {
+                    artifact it
+                }
+                artifact cppHeadersZip
+                artifact cppSourceZip
+
+                artifactId = "${baseArtifactId}-cpp"
+                groupId artifactGroupId
+                version pubVersion
+            }
+
+
+            java(MavenPublication) {
+                artifact jar
+                artifact sourcesJar
+                artifact javadocJar
+
+                artifactId = "${baseArtifactId}-java"
+                groupId artifactGroupId
+                version pubVersion
+            }
+        }
+    }
+}
+
+def vendordepsdir = rootProject.projectDir.toString() + "/build/vendordeps"
+
+// Add the correct version number to the template JSON file and place it in the vendordeps folder to be zipped
+task updateJSONVersion()  {
+    mkdir vendordepsdir
+    def newJSON = new File(vendordepsdir + "/ADIS16448.json")
+    def templateJSON = new File(rootProject.projectDir.toString() + "/ADIS16448_template.json")
+
+    newJSON.withWriter { def writer ->
+        templateJSON.eachLine { def line ->
+            def newLine = line.replace("__VERSION_HERE__", '"' + pubVersion + '"')
+            writer.write(newLine + "\n");
+        }
+    }
+}
+
+// Generate a zip file (with correct directory structure for )
+task generateReleaseZip(type: Zip){
+
+    dependsOn(":publish")
+
+    destinationDir = file("build")
+    baseName = "adis16448imu_roborio"
+    classifier = pubVersion
+    from(releasesRepoUrl) {
+        into 'maven'
+    }
+    from(vendordepsdir){
+        into 'vendordeps'
+    }
+
+    dependsOn updateJSONVersion
+}

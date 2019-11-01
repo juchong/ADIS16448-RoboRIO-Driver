@@ -277,7 +277,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
 
     // Validate the product ID
     if (readRegister(kRegPROD_ID) != 16448) {
-      m_spi.free();
+      m_spi.close();
       m_spi = null;
       m_samples = null;
       m_samples_mutex = null;
@@ -458,7 +458,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
    * Delete (free) the spi port used for the IMU.
    */
   @Override
-  public void free() {
+  public void close() {
     m_freed.set(true);
     if (m_samples_mutex != null) {
       m_samples_mutex.lock();
@@ -478,11 +478,11 @@ public class ADIS16448_IMU extends GyroBase implements Gyro, PIDSource, Sendable
     } catch (InterruptedException e) {
     }
     if (m_interrupt != null) {
-      m_interrupt.free();
+      m_interrupt.close();
       m_interrupt = null;
     }
     if (m_spi != null) {
-      m_spi.free();
+      m_spi.close();
       m_spi = null;
     }
   }
