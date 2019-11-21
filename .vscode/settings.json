@@ -1,5 +1,4 @@
 {
-    "java.configuration.updateBuildConfiguration": "disabled",
     "C_Cpp.default.configurationProvider": "vscode-wpilib",
     "files.exclude": {
         "**/.classpath": true,
