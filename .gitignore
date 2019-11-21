@@ -22,7 +22,7 @@ local.properties
 
 *.jar
 *.war
-*.ear
+*.ear.v
 
 !robot/libs/*/*.jar
 

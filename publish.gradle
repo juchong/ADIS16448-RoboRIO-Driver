@@ -2,7 +2,7 @@ apply plugin: 'maven-publish'
 
 ext.licenseFile = files("$rootDir/LICENSE.txt")
 
-def pubVersion = '2020-beta2'
+def pubVersion = '2020-beta3'
 
 def outputsFolder = file("$buildDir/allOutputs")
 
@@ -46,8 +46,8 @@ def zipBaseName = "_GROUP_com_github_juchong_ID_${baseArtifactId}-cpp_CLS"
 def javaBaseName = "_GROUP_com_github_juchong_ID_${baseArtifactId}-java_CLS"
 
 task cppHeadersZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = zipBaseName
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
     classifier = "headers"
 
     from(licenseFile) {
@@ -60,8 +60,8 @@ task cppHeadersZip(type: Zip) {
 }
 
 task cppSourceZip(type: Zip) {
-    destinationDir = outputsFolder
-    baseName = zipBaseName
+    destinationDirectory = outputsFolder
+    archiveBaseName = zipBaseName
     classifier = "source"
 
     from(licenseFile) {
@@ -90,21 +90,21 @@ task javadocJar(type: Jar, dependsOn: javadoc) {
 }
 
 task outputJar(type: Jar, dependsOn: classes) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     from sourceSets.main.output
 }
 
 task outputSourcesJar(type: Jar, dependsOn: classes) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     classifier = 'sources'
     from sourceSets.main.allSource
 }
 
 task outputJavadocJar(type: Jar, dependsOn: javadoc) {
-    baseName javaBaseName
-    destinationDir outputsFolder
+    archiveBaseName = javaBaseName
+    destinationDirectory = outputsFolder
     classifier = 'javadoc'
     from javadoc.destinationDir
 }
@@ -196,8 +196,8 @@ task generateReleaseZip(type: Zip){
 
     dependsOn(":publish")
 
-    destinationDir = file("build")
-    baseName = "adis16448imu_roborio"
+    destinationDirectory = file("build")
+    archiveBaseName = "adis16448imu_roborio"
     classifier = pubVersion
     from(releasesRepoUrl) {
         into 'maven'

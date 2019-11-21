@@ -1,10 +1,10 @@
 plugins {
   id 'cpp'
   id 'java'
-  id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.1'
-  id 'edu.wpi.first.NativeUtils' version '2020.1.5'
-  id 'edu.wpi.first.GradleJni' version '0.9.1'
-  id 'edu.wpi.first.GradleVsCode' version '0.9.6'
+  id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.2'
+  id 'edu.wpi.first.NativeUtils' version '2020.5.2'
+  id 'edu.wpi.first.GradleJni' version '0.10.1'
+  id 'edu.wpi.first.GradleVsCode' version '0.10.0'
   id 'google-test-test-suite'
 }
 
@@ -30,7 +30,7 @@ sourceSets {
     }
 }
 
-jar.baseName = "ADIS16448_IMU"
+jar.archiveBaseName = "ADIS16448_IMU"
 
 apply from: 'config.gradle'
 
@@ -81,5 +81,5 @@ model {
 apply from: 'publish.gradle'
 
 wrapper {
-  gradleVersion = '5.4.1'
+  gradleVersion = '6.0.1'
 }
