@@ -59,7 +59,7 @@ model {
       }
 
 
-      nativeUtils.useRequiredLibrary(it, "wpilib_shared")
+      nativeUtils.useRequiredLibrary(it, "wpilibc_shared", "ntcore_shared", "hal_shared", "wpiutil_shared")
     }
   }
 
@@ -72,7 +72,7 @@ model {
           include '**/*.cpp'
         }
       }
-      nativeUtils.useRequiredLibrary(it, "wpilib_shared", "googletest_static")
+      nativeUtils.useRequiredLibrary(it, "wpilib_executable_shared", "googletest_static")
     }
   }
 
