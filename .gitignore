@@ -13,10 +13,10 @@ tmp/
 local.properties
 .settings/
 .loadpath
--.project
+.project
 *.launch
 .cproject
--.classpath
+.classpath
 
 *.class
 
