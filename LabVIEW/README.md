@@ -1,34 +1,33 @@
 # LabVIEW Instructions
 
-## Self-Extracting Installation
-This driver assumes you have a working LabVIEW installation and 2019.0+ FRC software package already installed on your system. The self-extracting installer can be downloaded from the releases page [here](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases). Previous releases for older FRC software packages can also be found on the releases page. 
+## NI Package Manager Installation
+Installation via the NI Package Manager is the only supported installation method for the 2020 season. 
 
-Once downloaded, run the installer with administrator privileges. All the required files will be extracted to integrate the IMU driver with LabVIEW. Examples will also be installed to make testing your sensor easy!
+This library assumes you have a working 2019 LabVIEW Professional installation and 2020.b4 or greater FRC software package already installed on your system. The latest package installer can be found [here](https://github.com/juchong/ADIS16470-RoboRIO-Driver/releases). 
 
-## Manual Installation
-Copy the `ADIS16448 IMU` folder into the folder where your LabVIEW robot project is stored. Once copied, drag the `ADIS16448 IMU` folder into the project explorer. 
+## Installing the Library
+Once downloaded, double-click on the `.nipkg` file. The pre-installed NI Package Manager utility will extract the necessary files into the correct folders within your LabVIEW installation. Future updates to the library can be installed over previous installations. **LabVIEW must be closed completely before installing the library package!** 
 
-## Usage
-The LabVIEW driver can be used like any other sensor. If the **installer** was used, all .vi's can be found in the pallet shown below:
+![ADIS16470 .nipkg Icon](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/nipkg_icon.PNG)
 
-![ADIS16448 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/pallet.png)
+Once you double-click on the installer file, the NI Package Manager will walk you through installing the library. Click `Next` at the window shown below to install the library. *Note: The library version shown in the screenshots on this page may be different than the latest version available on the GitHub page!*
 
-If the driver was added to your project **manually**, all user .vi's should be located in your project like this:
+![ADIS16470 Installing Window](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/installing.PNG)
 
-![ADIS16448 LabVIEW Project Explorer](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/RobotProject.PNG)
+The package manager window should like like below if the library was installed successfully.
 
-## Examples
-If the **installer** was used, the examples can be accessed by following the steps below:
+![ADIS16470 Install Complete](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/installed.PNG)
 
-Navigate to `Help > Find Examples...` in the main window.
+## Using the Library
+The LabVIEW driver can be used like any other third-party library. All .vi's can be found in the pallet shown below:
 
-![ADIS16448 Main Menu](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/MainMenu.PNG)
+![ADIS16470 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/menu.PNG)
 
-In the NI Example Finder, navigate to `FRC Robotics > Sensors > ADIS16448 IMU.lvproj` and double click. 
+The example .vi included in this repository should look like below when successfully connected to a RoboRIO:
 
-![ADIS16448 Find Examples](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/ExampleFinder.PNG)
+![ADIS16470 LabVIEW Example Front Panel](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/labview_example.PNG)
 
-The example project will open. Select `ADIS16448 IMU Example.vi` and run the example. If the sensor was successfully detected, the front panel should look similar to this:
+## Uninstalling the Library
+To uninstall the library, open the NI Package Manager and select `ADIS16470 IMU RoboRIO Driver`. 
 
-![ADIS16448 Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/Reference/FrontPanel.png)
-
+![ADIS16470 .nipkg Icon](https://raw.githubusercontent.com/juchong/ADIS16470-RoboRIO-Driver/master/docs/uninstall.PNG)
