@@ -97,16 +97,16 @@ using namespace frc;
 
 ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, kComplementary, SPI::Port::kMXP) {}
 
-ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port) : m_yaw_axis(yaw_axis), m_algorithm(algorithm), m_spi(port){
+ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port) : m_algorithm(algorithm), m_yaw_axis(yaw_axis), m_spi(port){
 
   // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
   // Relies on the RIO hardware by default configuring an output as low
-  // and configuring an input as high Z. The 10k pull-up resistor internal to the 
-  // IMU then forces the reset line high for normal operation. 
+  // and configuring an input as high Z. The 10k pull-up resistor internal to the
+  // IMU then forces the reset line high for normal operation.
   DigitalOutput *m_reset_out = new DigitalOutput(18);  // Drive MXP DIO8 low
   Wait(0.01);  // Wait 10ms
   delete m_reset_out;
-  DigitalInput *m_reset_in = new DigitalInput(18);  // Set MXP DIO8 high
+  /*DigitalInput *m_reset_in = */new DigitalInput(18);  // Set MXP DIO8 high
   Wait(0.5);  // Wait 500ms for reset to complete
 
   // Set general SPI settings
@@ -156,7 +156,7 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
 
   // Re-initialize accumulations after calibration
   Reset();
-  
+
   // Let the user know the IMU was initiallized successfully
   DriverStation::ReportWarning("ADIS16448 IMU Successfully Initialized!");
 
@@ -257,12 +257,12 @@ void ADIS16448_IMU::Acquire() {
 
 	  // Waiting for the buffer to fill...
 	  Wait(.020); // A delay greater than 50ms could potentially overflow the local buffer (depends on sensor sample rate)
-    
+
     std::fill_n(buffer, 2000, 0);  // Clear buffer
-	  data_count = m_spi.ReadAutoReceivedData(buffer,0,0); // Read number of bytes currently stored in the buffer
+	  data_count = m_spi.ReadAutoReceivedData(buffer,0,0_s); // Read number of bytes currently stored in the buffer
 	  data_remainder = data_count % 29; // Check if frame is incomplete
     data_to_read = data_count - data_remainder;  // Remove incomplete data from read count
-	  m_spi.ReadAutoReceivedData(buffer,data_to_read,0); // Read data from DMA buffer
+	  m_spi.ReadAutoReceivedData(buffer,data_to_read,0_s); // Read data from DMA buffer
 
     // DEBUG: Print buffer size and contents to terminal
     /*std::cout << "Start - " << data_count << "," << data_remainder << "," << data_to_read << "," << iq << std::endl;
@@ -271,11 +271,11 @@ void ADIS16448_IMU::Acquire() {
       std::cout << buffer[m] << ",";
     }
     std::cout << " " << std::endl;
-    std::cout << "End" << std::endl;*/ 
+    std::cout << "End" << std::endl;*/
 
 	  for (int i = 0; i < data_to_read; i += 29) { // Process each set of 28 ints + timestamp (29 total)
 
-		  for (int j = 1; j < 29; j++) { 
+		  for (int j = 1; j < 29; j++) {
 			  data_subset[j - 1] = buffer[i + j];  // Split each set of 28 bytes into a sub-array for processing
       }
 
@@ -302,7 +302,7 @@ void ADIS16448_IMU::Acquire() {
 
       // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
       if (calc_crc == imu_crc) {
-        
+
         // Calculate delta-time (dt) using FPGA timestamps
         timestamp_new = buffer[i];  // Extract timestamp from buffer
         dt = (timestamp_new - timestamp_old)/1000000; // Calculate dt and convert us to seconds
@@ -369,7 +369,7 @@ void ADIS16448_IMU::Acquire() {
           m_accum_gyro_x += gyro_x;
           m_accum_gyro_y += gyro_y;
           m_accum_gyro_z += gyro_z;
-          
+
           // Accumulate gyro for angle integration
           m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
           m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
@@ -604,7 +604,7 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // (Pitch, Roll, and Yaw).  This sensor fusion approach effectively
   // combines the individual sensor's best respective properties while
   // mitigating their shortfalls.
-  // 
+  //
   // Design:
   // The Complementary Filter is an algorithm that allows a pair of sensors
   // to contribute differently to a common, composite measurement result.
@@ -613,16 +613,16 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // to maintain the original unit of measurement.  It is computationally
   // inexpensive when compared to alternative estimation techniques such as
   // the Kalman filter.  The algorithm is given by:
-  // 
+  //
   // angle(n) = (alpha)*(angle(n-1) + gyrorate * dt) + (1-alpha)*(accel or mag);
-  // 
-  // where : 
-  // 
+  //
+  // where :
+  //
   // alpha = tau / (tau + dt)
-  // 
+  //
   // This implementation uses the average Gyro rate across the dt period, so
   // above gyrorate = [(gyrorate(n)-gyrorate(n-1)]/2
-  // 
+  //
   // Essentially, for Pitch and Roll, the slow moving (lower frequency) part
   // of the rotation estimate is taken from the Accelerometer - ignoring the
   // high noise level, and the faster moving (higher frequency) part is taken
@@ -636,16 +636,16 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // between the low and high pass filters.  Both tau and the sample time,
   // dt, affect the parameter 'alpha', which sets the balance point for how
   // much of which sensor is 'trusted' to contribute to the rotation estimate.
-  // 
+  //
   // The Complementary Filter algorithm is applied to each X/Y/Z rotation
   // axis to compute R/P/Y outputs, respectively.
-  // 
+  //
   // Magnetometer readings are tilt-compensated when Tilt-Comp-(Yaw) is
   // asserted (True), by the IMU TILT subVI.  This creates what is known as a
   // tilt-compensated compass, which allows Yaw to be insensitive to the
   // effects of a non-level sensor, but generates error in Yaw during
   // movement (coordinate acceleration).
-  // 
+  //
   // The Yaw "South" crossing detector is necessary to allow a smooth
   // transition across the +/- 180 deg discontinuity (inherent in the ATAN
   // function).  Since -180 deg is congruent with +180 deg, Yaw needs to jump
@@ -655,7 +655,7 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // and evaluates how far it is from the previous reading.  If it is greater
   // than the previous reading by the Discriminant (= 180 deg), then Yaw just
   // crossed South.
-  // 
+  //
   // By choosing 180 as the Discriminant, the only way the detector can
   // produce a false positive, assuming a loop iteration of 70 msec, is for
   // it to rotate >2,571 dps ... (2,571=180/.07).  This is faster than the ST
@@ -666,10 +666,10 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // crossing occurs.  The Modulus function cannot be used here as the
   // Complementary Filter algorithm has 'state' (needs to remember previous
   // Yaw).
-  // 
+  //
   // We are in effect stitching together two ends of a ruler for 'modular
   // arithmetic' (clock math).
-  // 
+  //
   // Inputs:
   // GYRO - Gyro rate and sample time measurements.
   // ACCEL - Acceleration measurements.
@@ -679,12 +679,12 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // TAU MAG - tau parameter used to set sensor balance between Mag and Gyro
   //           for Yaw.
   // TILT COMP (Yaw) - Enables Yaw tilt-compensation if True.
-  // 
+  //
   // Outputs:
   // ROLL - Filtered Roll about sensor X-axis.
   // PITCH - Filtered Pitch about sensor Y-axis.
   // YAW - Filtered Yaw about sensor Z-axis.
-  // 
+  //
   // Implementation:
   // It's best to establish the optimum loop sample time first.  See IMU READ
   // implementation notes for guidance.  Each tau parameter should then be
@@ -693,22 +693,22 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // each time until the result doesn't drift, but not so far that the result
   // gets noisy.  An optimum tau for this IMU is likely in the range of 1.0
   // to 0.01, for a loop sample time between 10 and 100 ms.
-  // 
+  //
   // Note that both sample timing (dt) and tau both affect the balance
   // parameter, 'alpha'.  Adjusting either dt or tau will require the other
   // to be readjusted to maintain a particular filter performance.
-  // 
+  //
   // It is likely best to set Yaw tilt-compensation to off (False) if the Yaw
   // value is to be used as feedback in a closed loop control application.
   // The tradeoff is that Yaw will only be accurate while the robot is level.
-  // 
+  //
   // Since a Yaw of -180 degrees is congruent with +180 degrees (they
   // represent the same direction), it is possible that the Yaw output will
   // oscillate between these two values when the sensor happens to be
   // pointing due South, as sensor noise causes slight variation.  You will
   // need to account for this possibility if you are using the Yaw value for
   // decision-making in code.
-  // 
+  //
   // ----- The RoboBees FRC Team 836! -----
   // Complement your passion to solve problems with a STEM Education!
 
@@ -744,26 +744,26 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
   // for derivation of Pitch and Roll equations.  Used eqs 37 & 38 as Rxyz.
   // Eqs 42 & 43, as Ryxz, produce same values within Pitch & Roll
   // constraints.
-  // 
+  //
   // Freescale's Pitch/Roll derivation is preferred over ST's as it does not
   // degrade due to the Sine function linearity assumption.
-  // 
+  //
   // Pitch is accurate over +/- 90 degree range, and Roll is accurate within
   // +/- 180 degree range - as long as accelerometer is only sensing
   // acceleration due to gravity.  Movement (coordinate acceleration) will
   // add error to Pitch and Roll indications.
-  // 
-  // Yaw is not obtainable from an accelerometer due to its geometric 
+  //
+  // Yaw is not obtainable from an accelerometer due to its geometric
   // relationship with the Earth's gravity vector.  (Would have same problem
   // on Mars.)
-  // 
+  //
   // see http://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
   // for derivation of Yaw equation.  Used eq 12 in Appendix A (eq 13 is
   // replaced by ATAN2 function).  Yaw is obtainable from the magnetometer,
   // but is sensitive to any tilt from horizontal.  This uses Pitch and Roll
   // values from above for tilt compensation of Yaw, resulting in a
   // tilt-compensated compass.
-  // 
+  //
   // As with Pitch/Roll, movement (coordinate acceleration) will add error to
   // Yaw indication.
 
@@ -851,35 +851,27 @@ void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
 
 double ADIS16448_IMU::GetAngle() const {
   switch (m_yaw_axis) {
-    case kX: {
+    case kX:
       return GetAngleX();
-      break;
-    }
-    case kY: {
+    case kY:
       return GetAngleY();
-      break;
-    }
-    case kZ: {
+    case kZ:
       return GetAngleZ();
-      break;
-    }
+    default:
+      return 0.0;
   }
 }
 
 double ADIS16448_IMU::GetRate() const {
   switch (m_yaw_axis) {
-    case kX: {
+    case kX:
       return GetRateX();
-      break;
-    }
-    case kY: {
+    case kY:
       return GetRateY();
-      break;
-    }
-    case kZ: {
+    case kZ:
       return GetRateZ();
-      break;
-    }
+    default:
+      return 0.0;
   }
 }
 

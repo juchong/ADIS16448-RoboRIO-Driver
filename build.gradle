@@ -1,60 +1,85 @@
+plugins {
+  id 'cpp'
+  id 'java'
+  id 'edu.wpi.first.wpilib.repositories.WPILibRepositoriesPlugin' version '2020.2'
+  id 'edu.wpi.first.NativeUtils' version '2020.7.2'
+  id 'edu.wpi.first.GradleJni' version '0.10.1'
+  id 'edu.wpi.first.GradleVsCode' version '0.12.0'
+  id 'google-test-test-suite'
+}
+
 allprojects {
-    apply plugin: 'maven-publish'
     repositories {
-		mavenCentral()
+        mavenCentral()
+    }
+    if (project.hasProperty('releaseMode')) {
+        wpilibRepositories.addAllReleaseRepositories(it)
+    } else {
+        wpilibRepositories.addAllDevelopmentRepositories(it)
     }
 }
 
-def mavenrepo = rootProject.projectDir.toString() + "/build/maven"
-def vendordepsdir = rootProject.projectDir.toString() + "/build/vendordeps"
-def libraryVersion = "2019-r2"
-def publishGroupId = 'com.github.juchong'
-
-subprojects{
-	ext.libVersion = libraryVersion
-    ext.publishGroup = publishGroupId
-	publishing {
-		repositories {
-			maven {
-				url = mavenrepo
-			}
-		}
-	}
-}
-
-task clean(type: Delete){
-    delete "build"
-}
-
-// Add the correct version number to the template JSON file and place it in the vendordeps folder to be zipped
-task updateJSONVersion()  {
-    mkdir vendordepsdir
-    def newJSON = new File(vendordepsdir + "/ADIS16448.json")
-    def templateJSON = new File(rootProject.projectDir.toString() + "/ADIS16448_template.json")
-
-    newJSON.withWriter { def writer ->
-        templateJSON.eachLine { def line ->
-            def newLine = line.replace("__VERSION_HERE__", '"' + libraryVersion + '"')
-            writer.write(newLine + "\n");
+sourceSets {
+    main {
+        java {
+            srcDirs = ['java/src/main/java']
+        }
+        resources {
+            srcDirs = ['java/src/main/resources']
         }
     }
 }
 
-// Generate a zip file (with correct directory structure for )
-task generateReleaseZip(type: Zip){
+jar.archiveBaseName = "ADIS16448_IMU"
 
-    subprojects.each { dependsOn("${it.name}:publish") }
+apply from: 'config.gradle'
 
-    destinationDir = file("build")
-    baseName = "adis16448imu_roborio"
-    classifier = libraryVersion
-    from(mavenrepo) {
-        into 'maven'
-    }
-    from(vendordepsdir){
-        into 'vendordeps'
-    }
+apply from: 'dependencies.gradle'
+
+nativeUtils {
+  exportsConfigs {
+      adis16448imu {
+      }
+  }
 }
 
-publish.dependsOn updateJSONVersion
-publish.dependsOn generateReleaseZip
+model {
+  components {
+    adis16448imu(NativeLibrarySpec) {
+      sources {
+        cpp {
+          source {
+            srcDirs 'c++/src/main/cpp'
+            include '**/*.cpp'
+          }
+          exportedHeaders {
+            srcDirs 'c++/src/main/include'
+          }
+        }
+      }
+
+
+      nativeUtils.useRequiredLibrary(it, "wpilibc_shared", "ntcore_shared", "hal_shared", "wpiutil_shared")
+    }
+  }
+
+  testSuites {
+    adis16448imuTest(GoogleTestTestSuiteSpec) {
+      testing $.components.adis16448imu
+      sources.cpp {
+        source {
+          srcDir 'c++/src/test/cpp'
+          include '**/*.cpp'
+        }
+      }
+      nativeUtils.useRequiredLibrary(it, "wpilib_executable_shared", "googletest_static")
+    }
+  }
+
+}
+
+apply from: 'publish.gradle'
+
+wrapper {
+  gradleVersion = '6.0.1'
+}

@@ -4,6 +4,10 @@ pluginManagement {
     repositories {
         mavenLocal()
         gradlePluginPortal()
+        maven {
+            name 'artifactory'
+            url 'https://frcmaven.wpi.edu/artifactory/plugins'
+        }
         String frcYear = '2019'
         File frcHome
         if (OperatingSystem.current().isWindows()) {
@@ -26,6 +30,3 @@ pluginManagement {
 
 
 rootProject.name = 'ADIS16448_IMU'
-
-include 'java'
-include 'c++'
