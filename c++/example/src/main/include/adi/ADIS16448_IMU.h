@@ -25,6 +25,59 @@
 
 namespace frc {
 
+// Not always defined in cmath (not part of standard)
+#ifndef M_PI
+    static constexpr uint8_t M_PI 3.14159265358979323846;
+#endif
+
+/* ADIS16448 Register Map Declaration */
+static constexpr uint8_t FLASH_CNT    =   0x00;   // Flash memory write count
+static constexpr uint8_t XGYRO_OUT    =   0x04;   // X-axis gyroscope output
+static constexpr uint8_t YGYRO_OUT    =   0x06;   // Y-axis gyroscope output
+static constexpr uint8_t ZGYRO_OUT    =   0x08;   // Z-axis gyroscope output
+static constexpr uint8_t XACCL_OUT    =   0x0A;   // X-axis accelerometer output
+static constexpr uint8_t YACCL_OUT    =   0x0C;   // Y-axis accelerometer output
+static constexpr uint8_t ZACCL_OUT    =   0x0E;   // Z-axis accelerometer output
+static constexpr uint8_t XMAGN_OUT    =   0x10;   // X-axis magnetometer output
+static constexpr uint8_t YMAGN_OUT    =   0x12;   // Y-axis magnetometer output
+static constexpr uint8_t ZMAGN_OUT    =   0x14;   // Z-axis magnetometer output
+static constexpr uint8_t BARO_OUT     =   0x16;   // Barometer pressure measurement, high word
+static constexpr uint8_t TEMP_OUT     =   0x18;   // Temperature output
+static constexpr uint8_t XGYRO_OFF    =   0x1A;   // X-axis gyroscope bias offset factor
+static constexpr uint8_t YGYRO_OFF    =   0x1C;   // Y-axis gyroscope bias offset factor
+static constexpr uint8_t ZGYRO_OFF    =   0x1E;   // Z-axis gyroscope bias offset factor
+static constexpr uint8_t XACCL_OFF    =   0x20;   // X-axis acceleration bias offset factor
+static constexpr uint8_t YACCL_OFF    =   0x22;   // Y-axis acceleration bias offset factor
+static constexpr uint8_t ZACCL_OFF    =   0x24;   // Z-axis acceleration bias offset factor
+static constexpr uint8_t XMAGN_HIC    =   0x26;   // X-axis magnetometer, hard iron factor
+static constexpr uint8_t YMAGN_HIC    =   0x28;   // Y-axis magnetometer, hard iron factor
+static constexpr uint8_t ZMAGN_HIC    =   0x2A;   // Z-axis magnetometer, hard iron factor
+static constexpr uint8_t XMAGN_SIC    =   0x2C;   // X-axis magnetometer, soft iron factor
+static constexpr uint8_t YMAGN_SIC    =   0x2E;   // Y-axis magnetometer, soft iron factor
+static constexpr uint8_t ZMAGN_SIC    =   0x30;   // Z-axis magnetometer, soft iron factor
+static constexpr uint8_t GPIO_CTRL    =   0x32;   // GPIO control
+static constexpr uint8_t MSC_CTRL     =   0x34;   // MISC control
+static constexpr uint8_t SMPL_PRD     =   0x36;   // Sample clock/Decimation filter control
+static constexpr uint8_t SENS_AVG     =   0x38;   // Digital filter control
+static constexpr uint8_t SEQ_CNT      =   0x3A;   // MAGN_OUT and BARO_OUT counter
+static constexpr uint8_t DIAG_STAT    =   0x3C;   // System status
+static constexpr uint8_t GLOB_CMD     =   0x3E;   // System command
+static constexpr uint8_t ALM_MAG1     =   0x40;   // Alarm 1 amplitude threshold
+static constexpr uint8_t ALM_MAG2     =   0x42;   // Alarm 2 amplitude threshold
+static constexpr uint8_t ALM_SMPL1    =   0x44;   // Alarm 1 sample size
+static constexpr uint8_t ALM_SMPL2    =   0x46;   // Alarm 2 sample size
+static constexpr uint8_t ALM_CTRL     =   0x48;   // Alarm control
+static constexpr uint8_t LOT_ID1      =   0x52;   // Lot identification number
+static constexpr uint8_t LOT_ID2      =   0x54;   // Lot identification number
+static constexpr uint8_t PROD_ID      =   0x56;   // Product identifier
+static constexpr uint8_t SERIAL_NUM   =   0x58;   // Lot-specific serial number
+
+/* ADIS16448 Constants */
+const double delta_angle_sf = 2160.0 / 2147483648.0;
+const double rad_to_deg = 57.2957795;
+const double deg_to_rad = 0.0174532;
+const double grav = 9.81;
+
 /**
  * Use DMA SPI to read rate, acceleration, and magnetometer data from the ADIS16448 IMU
  * and return the robots heading relative to a starting position, AHRS, and instant measurements
@@ -41,7 +94,6 @@ namespace frc {
 class ADIS16448_IMU : public GyroBase {
   public:
 
-    enum AHRSAlgorithm { kComplementary, kMadgwick };
     enum IMUAxis { kX, kY, kZ };
 
     /**
@@ -56,7 +108,7 @@ class ADIS16448_IMU : public GyroBase {
      * @param algorithm The AHRS algorithm to use. Valid options are kComplementary and kMadgwick
      * @param port The SPI port where the IMU is connected.
      */
-    explicit ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port);
+    explicit ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time);
 
     ~ADIS16448_IMU();
 
@@ -78,6 +130,8 @@ class ADIS16448_IMU : public GyroBase {
      * The calibration routine can be triggered by the user during runtime.
      */
     void Calibrate() override;
+
+    int ConfigCalTime(int new_cal_time);
 
     /**
      * Reset the gyro.
@@ -111,258 +165,62 @@ class ADIS16448_IMU : public GyroBase {
      * @return the current rate in degrees per second
      */
     double GetRate() const override;
+
+    double GetGyroAngleX() const;
+
+    double GetGyroAngleY() const;
+
+    double GetGyroAngleZ() const;
     
-    /**
-     * Return the IMU X-axis integrated angle in degrees.
-     *
-     * The angle is based on the current accumulator value corrected by
-     * offset calibration and built-in IMU calibration. The angle is continuous, 
-     * that is it will continue from 360->361 degrees. This allows algorithms 
-     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-     * from 360 to 0 on the second time around. 
-     *
-     * @return the current accumulated value of the X-axis in degrees. 
-     */
-    double GetAngleX() const;
+    double GetGyroInstantX() const;
 
-    /**
-     * Return the IMU Y-axis integrated angle in degrees.
-     *
-     * The angle is based on the current accumulator value corrected by
-     * offset calibration and built-in IMU calibration. The angle is continuous, 
-     * that is it will continue from 360->361 degrees. This allows algorithms 
-     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-     * from 360 to 0 on the second time around. 
-     *
-     * @return the current accumulated value of the Y-axis in degrees. 
-     */
-    double GetAngleY() const;
+    double GetGyroInstantY() const;
 
-    /**
-     * Return the IMU Z-axis integrated angle in degrees.
-     *
-     * The angle is based on the current accumulator value corrected by
-     * offset calibration and built-in IMU calibration. The angle is continuous, 
-     * that is it will continue from 360->361 degrees. This allows algorithms 
-     * that wouldn't want to see a discontinuity in the gyro output as it sweeps 
-     * from 360 to 0 on the second time around. 
-     *
-     * @return the current accumulated value of the Z-axis in degrees. 
-     */
-    double GetAngleZ() const;
+    double GetGyroInstantZ() const;
 
-    /**
-     * Return the rate of rotation of the X-axis gyro.
-     *
-     * The rate is based on the most recent reading of the gyro value
-     *
-     * @return the current rate of the X-axis gyro in degrees per second
-     */
-    double GetRateX() const;
+    double GetAccelInstantX() const;
 
-    /**
-     * Return the rate of rotation of the Y-axis gyro.
-     *
-     * The rate is based on the most recent reading of the gyro value
-     *
-     * @return the current rate of the Y-axis gyro in degrees per second
-     */
-    double GetRateY() const;
+    double GetAccelInstantY() const;
 
-    /**
-     * Return the rate of rotation of the Z-axis gyro.
-     *
-     * The rate is based on the most recent reading of the gyro value
-     *
-     * @return the current rate of the Z-axis gyro in degrees per second
-     */
-    double GetRateZ() const;
+    double GetAccelInstantZ() const;
 
-    /**
-     * Return acceleration of the X-axis accelerometer.
-     *
-     * The acceleration measurement is based on the most recent reading of 
-     * the accelerometer value.
-     *
-     * @return the current acceleration of the X-axis accelerometer in g's
-     */
-    double GetAccelX() const;
+    double GetXComplementaryAngle() const;
 
-    /**
-     * Return acceleration of the Y-axis accelerometer.
-     *
-     * The acceleration measurement is based on the most recent reading of 
-     * the accelerometer value.
-     *
-     * @return the current acceleration of the Y-axis accelerometer in g's
-     */
-    double GetAccelY() const;
+    double GetYComplementaryAngle() const;
 
-    /**
-     * Return acceleration of the Z-axis accelerometer.
-     *
-     * The acceleration measurement is based on the most recent reading of 
-     * the accelerometer value.
-     *
-     * @return the current acceleration of the Z-axis accelerometer in g's
-     */
-    double GetAccelZ() const;
+    double GetXFilteredAccelAngle() const;
 
-    /**
-     * Return magnetic field intensity of the X-axis magnetometer.
-     *
-     * The megnetic field intensity measurement is based on the most recent reading of 
-     * the magnetometer value.
-     *
-     * @return the current magnetic field intensity of the X-axis magnetometer in mgauss
-     */
-    double GetMagX() const;
+    double GetYFilteredAccelAngle() const;
 
-    /**
-     * Return magnetic field intensity of the Y-axis magnetometer.
-     *
-     * The megnetic field intensity measurement is based on the most recent reading of 
-     * the magnetometer value.
-     *
-     * @return the current magnetic field intensity of the Y-axis magnetometer in mgauss
-     */
-    double GetMagY() const;
+    double GetMagInstantX() const;
 
-    /**
-     * Return magnetic field intensity of the Z-axis magnetometer.
-     *
-     * The megnetic field intensity measurement is based on the most recent reading of 
-     * the magnetometer value.
-     *
-     * @return the current magnetic field intensity of the Z-axis magnetometer in mgauss
-     */
-    double GetMagZ() const;
+    double GetMagInstantY() const;
 
-    /**
-     * Return the pitch angle measurement with reference to the yaw_axis configuration.
-     *
-     * The pitch angle measurement is based on a combination of gyroscope, accelerometer,
-     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-     * angle accumulation WILL roll over.
-     *
-     * @return the pitch angle measurement with respect to the yaw_axis configuration in degrees
-     */
-    double GetPitch() const;
+    double GetMagInstantZ() const;
 
-    /**
-     * Return the roll angle measurement with reference to the yaw_axis configuration.
-     *
-     * The roll angle measurement is based on a combination of gyroscope, accelerometer,
-     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-     * angle accumulation WILL roll over.
-     *
-     * @return the roll angle measurement with respect to the yaw_axis configuration in degrees
-     */
-    double GetRoll() const;
-
-    /**
-     * Return the yaw angle measurement with reference to the yaw_axis configuration.
-     *
-     * The yaw angle measurement is based on a combination of gyroscope, accelerometer,
-     * and magnetometer measurements fused using the configured AHRS algorithm. Note that the 
-     * angle accumulation WILL roll over.
-     *
-     * @return the yaw angle measurement with respect to the yaw_axis configuration in degrees
-     */
-    double GetYaw() const;
-
-    /**
-     * Return the delta-time calculation.
-     *
-     * The delta-time value is calculated by subtracting the previous data timestamp from the
-     * current timestamp. 
-     *
-     * @return the delta-time calculation of each data capture in seconds
-     */
-    double Getdt() const;
-
-    /**
-     * Return IMU status.
-     *
-     * IMU status can be deciphered by referring to the DIAG_STAT (Table 31) in the ADIS16448 datasheet.
-     * 
-     * @return the status code read from the IMU
-     */
-    double GetStatus() const;
-
-    /**
-     * Return barometric pressure as measured by the IMU.
-     *
-     * The barometric pressure measurement is based on the most recent reading of the barometer.
-     * Note that the barometer is updated slower than the rest of the sensors (51.2 sps)
-     * 
-     * @return the current barometric pressure in mbar
-     */
     double GetBarometricPressure() const;
 
-    /**
-     * Return temperature as measured by the IMU.
-     *
-     * The temperature measurement is based on the most recent reading of the temperature sensor
-     * built in to the inertial sensors. 
-     * 
-     * @return the current temperature in degrees C
-     */
     double GetTemperature() const;
 
-    /**
-     * Return quaternions used for AHRS calculations.
-     * 
-     * @return the quaternion used in AHRS calculations
-     */
-    double GetQuaternionW() const;
-    double GetQuaternionX() const;
-    double GetQuaternionY() const;
-    double GetQuaternionZ() const;
+    IMUAxis GetYawAxis() const;
 
-    /**
-     * Enable/Disable yaw tilt compensation for the Complementary AHRS.
-     * 
-     * It is likely best to set yaw tilt compensation to false if the yaw
-     * value is to be used as feedback in a closed-loop control application. 
-     * The tradeoff is that yaw will only be accurate while the robot is level.
-     * 
-     * Note that this setting has no effect when using the Madgwick AHRS calculation method.
-     */
-    void SetTiltCompYaw(bool enabled);
+    int SetYawAxis(IMUAxis yaw_axis);
 
     void InitSendable(SendableBuilder& builder) override;
 
 private:
-  // Sample from the IMU
-  struct Sample {
-    double gyro_x;
-    double gyro_y;
-    double gyro_z;
-    double accel_x;
-    double accel_y;
-    double accel_z;
-    double mag_x;
-    double mag_y;
-    double mag_z;
-    double baro;
-    double temp;
-    double status;
-    double dt;
 
-    // Swap axis as appropriate for yaw axis selection
-    void AdjustYawAxis(IMUAxis yaw_axis);
-  };
+  bool SwitchToStandardSPI();
+
+  bool SwitchToAutoSPI();
 
   uint16_t ReadRegister(uint8_t reg);
-  void WriteRegister(uint8_t reg, uint16_t val);
-  void Acquire();
-  void Calculate();
-  void CalculateMadgwick(Sample& sample, double beta);
-  void CalculateComplementary(Sample& sample);
 
-  // AHRS algorithm
-  AHRSAlgorithm m_algorithm;
+  void WriteRegister(uint8_t reg, uint16_t val);
+
+  void Acquire();
+
+  void Close();
 
   // AHRS yaw axis
   IMUAxis m_yaw_axis;
@@ -384,8 +242,11 @@ private:
   double m_mag_z = 0.0;
   double m_baro = 0.0;
   double m_temp = 0.0;
-  double m_status = 0.0;
-  double m_dt = 0.0;
+
+  // Complementary filter variables
+  double m_tau = 1.0;
+  double m_dt, m_alpha = 0.0;
+  double m_compAngleX, m_compAngleY, m_accelAngleX, m_accelAngleY = 0.0;
 
   // Accumulated gyro values (for offset calculation)
   int m_accum_count = 0;
@@ -402,45 +263,66 @@ private:
   double m_last_sample_time = 0.0;
   double timestamp_old = 0;
 
-  // Kalman (AHRS)
-  double m_ahrs_q1 = 1, m_ahrs_q2 = 0, m_ahrs_q3 = 0, m_ahrs_q4 = 0;
+  //Complementary filter functions
+  double FormatFastConverge(double compAngle, double accAngle);
 
-  // Complementary AHRS
-  bool m_first = true;
-  double m_gyro_x_prev;
-  double m_gyro_y_prev;
-  double m_gyro_z_prev;
-  double m_mag_angle_prev = 0.0;
-  bool m_tilt_comp_yaw = true;
+  double FormatRange0to2PI(double compAngle);
 
-  // AHRS outputs
-  double m_yaw = 0.0;
-  double m_roll = 0.0;
-  double m_pitch = 0.0;
+  double FormatAccelRange(double accelAngle, double accelZ);
 
-  std::atomic_bool m_freed;
+  double CompFilterProcess(double compAngle, double accelAngle, double omega);
 
-  SPI m_spi;
-  std::unique_ptr<frc::DigitalOutput> m_reset_out;
-  std::unique_ptr<frc::DigitalInput> m_reset_in;
-  std::unique_ptr<frc::DigitalSource> m_interrupt;
+  // State and resource variables
+  volatile bool m_thread_active = false;
+  volatile bool m_first_run = true;
+  volatile bool m_thread_idle = false;
 
+  bool m_auto_configured = false;
+  SPI::Port m_spi_port;
+  uint16_t m_calibration_time;
+  SPI *m_spi = nullptr;
+  DigitalInput *m_auto_interrupt;
+  
   std::thread m_acquire_task;
-  std::thread m_calculate_task;
 
   mutable wpi::mutex m_mutex;
 
-  // Samples FIFO.  We make the FIFO 2 longer than it needs
-  // to be so the input and output never overlap (we hold a reference
-  // to the output while the lock is released).
-  static constexpr int kSamplesDepth = 10;
-  Sample m_samples[kSamplesDepth + 2];
-  wpi::mutex m_samples_mutex;
-  wpi::condition_variable m_samples_not_empty;
-  int m_samples_count = 0;
-  int m_samples_take_index = 0;
-  int m_samples_put_index = 0;
-  bool m_calculate_started = false;
+  // CRC-16 Look-Up Table
+  const uint16_t adiscrc[256] = {
+  0x0000, 0x17CE, 0x0FDF, 0x1811, 0x1FBE, 0x0870, 0x1061, 0x07AF,
+  0x1F3F, 0x08F1, 0x10E0, 0x072E, 0x0081, 0x174F, 0x0F5E, 0x1890,
+  0x1E3D, 0x09F3, 0x11E2, 0x062C, 0x0183, 0x164D, 0x0E5C, 0x1992,
+  0x0102, 0x16CC, 0x0EDD, 0x1913, 0x1EBC, 0x0972, 0x1163, 0x06AD,
+  0x1C39, 0x0BF7, 0x13E6, 0x0428, 0x0387, 0x1449, 0x0C58, 0x1B96,
+  0x0306, 0x14C8, 0x0CD9, 0x1B17, 0x1CB8, 0x0B76, 0x1367, 0x04A9,
+  0x0204, 0x15CA, 0x0DDB, 0x1A15, 0x1DBA, 0x0A74, 0x1265, 0x05AB,
+  0x1D3B, 0x0AF5, 0x12E4, 0x052A, 0x0285, 0x154B, 0x0D5A, 0x1A94,
+  0x1831, 0x0FFF, 0x17EE, 0x0020, 0x078F, 0x1041, 0x0850, 0x1F9E,
+  0x070E, 0x10C0, 0x08D1, 0x1F1F, 0x18B0, 0x0F7E, 0x176F, 0x00A1,
+  0x060C, 0x11C2, 0x09D3, 0x1E1D, 0x19B2, 0x0E7C, 0x166D, 0x01A3,
+  0x1933, 0x0EFD, 0x16EC, 0x0122, 0x068D, 0x1143, 0x0952, 0x1E9C,
+  0x0408, 0x13C6, 0x0BD7, 0x1C19, 0x1BB6, 0x0C78, 0x1469, 0x03A7,
+  0x1B37, 0x0CF9, 0x14E8, 0x0326, 0x0489, 0x1347, 0x0B56, 0x1C98,
+  0x1A35, 0x0DFB, 0x15EA, 0x0224, 0x058B, 0x1245, 0x0A54, 0x1D9A,
+  0x050A, 0x12C4, 0x0AD5, 0x1D1B, 0x1AB4, 0x0D7A, 0x156B, 0x02A5,
+  0x1021, 0x07EF, 0x1FFE, 0x0830, 0x0F9F, 0x1851, 0x0040, 0x178E,
+  0x0F1E, 0x18D0, 0x00C1, 0x170F, 0x10A0, 0x076E, 0x1F7F, 0x08B1,
+  0x0E1C, 0x19D2, 0x01C3, 0x160D, 0x11A2, 0x066C, 0x1E7D, 0x09B3,
+  0x1123, 0x06ED, 0x1EFC, 0x0932, 0x0E9D, 0x1953, 0x0142, 0x168C,
+  0x0C18, 0x1BD6, 0x03C7, 0x1409, 0x13A6, 0x0468, 0x1C79, 0x0BB7,
+  0x1327, 0x04E9, 0x1CF8, 0x0B36, 0x0C99, 0x1B57, 0x0346, 0x1488,
+  0x1225, 0x05EB, 0x1DFA, 0x0A34, 0x0D9B, 0x1A55, 0x0244, 0x158A,
+  0x0D1A, 0x1AD4, 0x02C5, 0x150B, 0x12A4, 0x056A, 0x1D7B, 0x0AB5,
+  0x0810, 0x1FDE, 0x07CF, 0x1001, 0x17AE, 0x0060, 0x1871, 0x0FBF,
+  0x172F, 0x00E1, 0x18F0, 0x0F3E, 0x0891, 0x1F5F, 0x074E, 0x1080,
+  0x162D, 0x01E3, 0x19F2, 0x0E3C, 0x0993, 0x1E5D, 0x064C, 0x1182,
+  0x0912, 0x1EDC, 0x06CD, 0x1103, 0x16AC, 0x0162, 0x1973, 0x0EBD,
+  0x1429, 0x03E7, 0x1BF6, 0x0C38, 0x0B97, 0x1C59, 0x0448, 0x1386,
+  0x0B16, 0x1CD8, 0x04C9, 0x1307, 0x14A8, 0x0366, 0x1B77, 0x0CB9,
+  0x0A14, 0x1DDA, 0x05CB, 0x1205, 0x15AA, 0x0264, 0x1A75, 0x0DBB,
+  0x152B, 0x02E5, 0x1AF4, 0x0D3A, 0x0A95, 0x1D5B, 0x054A, 0x1284
+  };
+
 };
 
 } //namespace frc
