@@ -1,10 +1,10 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) 2016-2018 FIRST. All Rights Reserved.                        */
+/* Copyright (c) 2016-2020 Analog Devices Inc. All Rights Reserved.           */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
 /* must be accompanied by the FIRST BSD license file in the root directory of */
 /* the project.                                                               */
 /*                                                                            */
-/* Modified by Juan Chong - juan.chong@analog.com                             */
+/* Modified by Juan Chong - frcsupport@analog.com                             */
 /*----------------------------------------------------------------------------*/
 
 #pragma once
@@ -24,11 +24,6 @@
 #include <wpi/condition_variable.h>
 
 namespace frc {
-
-// Not always defined in cmath (not part of standard)
-#ifndef M_PI
-    static constexpr uint8_t M_PI 3.14159265358979323846;
-#endif
 
 /* ADIS16448 Register Map Declaration */
 static constexpr uint8_t FLASH_CNT    =   0x00;   // Flash memory write count
@@ -77,6 +72,13 @@ const double delta_angle_sf = 2160.0 / 2147483648.0;
 const double rad_to_deg = 57.2957795;
 const double deg_to_rad = 0.0174532;
 const double grav = 9.81;
+
+  /** @brief struct to store offset data */
+  struct offset_data {
+    double m_accum_gyro_x = 0.0;
+    double m_accum_gyro_y = 0.0;
+    double m_accum_gyro_z = 0.0;
+  };
 
 /**
  * Use DMA SPI to read rate, acceleration, and magnetometer data from the ADIS16448 IMU
@@ -225,11 +227,6 @@ private:
   // AHRS yaw axis
   IMUAxis m_yaw_axis;
 
-  // Gyro offset
-  double m_gyro_offset_x = 0.0;
-  double m_gyro_offset_y = 0.0;
-  double m_gyro_offset_z = 0.0;
-
   // Last read values (post-scaling)
   double m_gyro_x = 0.0;
   double m_gyro_y = 0.0;
@@ -244,18 +241,23 @@ private:
   double m_temp = 0.0;
 
   // Complementary filter variables
-  double m_tau = 1.0;
+  double m_tau = 0.5;
   double m_dt, m_alpha = 0.0;
   double m_compAngleX, m_compAngleY, m_accelAngleX, m_accelAngleY = 0.0;
 
+  //vector for storing most recent imu values
+  offset_data * m_offset_buffer = nullptr;
+
+  double m_gyro_offset_x = 0.0;
+  double m_gyro_offset_y = 0.0;
+  double m_gyro_offset_z = 0.0;
+
+  //function to re-init offset buffer
+  void InitOffsetBuffer(int size);
+
   // Accumulated gyro values (for offset calculation)
   int m_avg_size = 0;
-  struct m_offset_data {
-    double m_accum_gyro_x = 0.0;
-    double m_accum_gyro_y = 0.0;
-    double m_accum_gyro_z = 0.0;
-    int m_accum_count = 0;
-  };
+  int m_accum_count = 0;
 
   // Integrated gyro values
   double m_integ_gyro_x = 0.0;
@@ -279,6 +281,7 @@ private:
   volatile bool m_thread_active = false;
   volatile bool m_first_run = true;
   volatile bool m_thread_idle = false;
+  volatile bool m_start_up_mode = true;
 
   bool m_auto_configured = false;
   SPI::Port m_spi_port;

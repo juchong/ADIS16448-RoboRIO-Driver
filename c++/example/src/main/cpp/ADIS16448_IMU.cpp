@@ -1,15 +1,16 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) 2016-2018 FIRST. All Rights Reserved.                        */
+/* Copyright (c) 2016-2020 Analog Devices Inc. All Rights Reserved.           */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
 /* must be accompanied by the FIRST BSD license file in the root directory of */
 /* the project.                                                               */
 /*                                                                            */
-/* Modified by Juan Chong - juan.chong@analog.com                             */
+/* Modified by Juan Chong - frcsupport@analog.com                             */
 /*----------------------------------------------------------------------------*/
 
 #include <string>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 #include <frc/DigitalInput.h>
 #include <frc/DigitalSource.h>
@@ -56,8 +57,7 @@ ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, SPI::Port::kMXP, 4) {}
 
 ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time) : 
                 m_yaw_axis(yaw_axis), 
-                m_spi_port(port),
-                m_calibration_time(cal_time) {
+                m_spi_port(port){
 
   // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
   // Relies on the RIO hardware by default configuring an output as low
@@ -68,6 +68,8 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time
   delete m_reset_out;
   new DigitalInput(18);  // Set MXP DIO8 high
   Wait(0.5);  // Wait 500ms for reset to complete
+
+  ConfigCalTime(cal_time);
 
   // Configure standard SPI
   if (!SwitchToStandardSPI()) {
@@ -80,15 +82,24 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time
   WriteRegister(MSC_CTRL, 0x0016);
   // Configure IMU internal Bartlett filter
   WriteRegister(SENS_AVG, 0x0402);
-
-  //TODO: Move this somewhere useful
-  // Notify DS that IMU calibration delay is active
-  DriverStation::ReportWarning("ADIS16448 IMU Detected. Starting initial calibration delay.");
-
+  // Clear offset registers
+  WriteRegister(XGYRO_OFF, 0x0000);
+  WriteRegister(YGYRO_OFF, 0x0000);
+  WriteRegister(ZGYRO_OFF, 0x0000);
   // Configure and enable auto SPI
   if(!SwitchToAutoSPI()) {
     return;
   }
+  // Notify DS that IMU calibration delay is active
+  DriverStation::ReportWarning("ADIS16448 IMU Detected. Starting initial calibration delay.");
+  // Wait for whatever time the user set as the start-up delay
+  Wait((double)m_calibration_time * 1.2);
+  // Execute calibration routine
+  Calibrate();
+  // Reset accumulated offsets
+  Reset();
+  // Tell the acquire loop that we're done starting up
+  m_start_up_mode = false;
 
   // Let the user know the IMU was initiallized successfully
   DriverStation::ReportWarning("ADIS16448 IMU Successfully Initialized!");
@@ -172,6 +183,25 @@ bool ADIS16448_IMU::SwitchToStandardSPI(){
   }
 }
 
+void ADIS16448_IMU::InitOffsetBuffer(int size){
+  //avoid exceptions in the case of bad arguments
+  if(size < 1)
+    size = 1;
+
+  //set average size to size (correct bad values)
+  m_avg_size = size;
+
+  //resize vector
+  if(m_offset_buffer != nullptr)
+  {
+    delete[] m_offset_buffer;
+  }
+  m_offset_buffer = new offset_data[size];
+
+  //set accumulate count to 0
+  m_accum_count = 0;
+}
+
 /**
   * This function switches the active SPI port to auto SPI and is used primarily when 
   * exiting standard SPI. Auto SPI is required to asynchronously read data over SPI as it utilizes
@@ -209,8 +239,7 @@ bool ADIS16448_IMU::SwitchToAutoSPI(){
     m_first_run = true;
     m_thread_active = true;
     // Set up circular buffer
-    std::vector<m_offset_data> m_offset_buffer(m_avg_size);
-    std::vector<m_offset_data>::iterator m_offset_counter = m_offset_buffer.begin();
+    InitOffsetBuffer(m_avg_size);
     // Kick off acquire thread
     m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
     std::cout << "New IMU Processing thread activated!" << std::endl;
@@ -233,7 +262,7 @@ bool ADIS16448_IMU::SwitchToAutoSPI(){
 
 /**
  *
- */
+ **/
 int ADIS16448_IMU::ConfigCalTime(int new_cal_time) { 
   if(m_calibration_time == new_cal_time) {
     return 1;
@@ -241,25 +270,34 @@ int ADIS16448_IMU::ConfigCalTime(int new_cal_time) {
   else {
     m_calibration_time = (uint16_t)new_cal_time;
     m_avg_size = m_calibration_time * 819;
+    InitOffsetBuffer(m_avg_size);
     return 0;
   }
 }
 
-//TODO: Fix this after I figure out how to implement the cal
+/**
+ * 
+ **/
 void ADIS16448_IMU::Calibrate() {
-  int buf_sumx = 0;
-  int buf_sumy = 0;
-  int buf_sumz = 0;
-  for (std::vector<m_offset_data>::const_iterator n = m_offset_buffer.begin(); n != m_offset_buffer.end(); ++n)
-  {
-    buf_sumx += n->m_accum_gyro_x;
-    buf_sumy += n->m_accum_gyro_y;
-    buf_sumz += n->m_accum_gyro_z;
-  }
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  m_gyro_offset_x = buf_sumx / (float)m_offset_buffer.size());
-  m_gyro_offset_y = buf_sumy / (float)m_offset_buffer.size());
-  m_gyro_offset_z = buf_sumz / (float)m_offset_buffer.size());
+  // Calculate the running average
+  int gyroAverageSize = std::min(m_accum_count, m_avg_size);
+  double m_gyro_accum_x = 0.0;
+  double m_gyro_accum_y = 0.0;
+  double m_gyro_accum_z = 0.0;
+  for(int i = 0; i < gyroAverageSize; i++)
+  {
+    m_gyro_accum_x += m_offset_buffer[i].m_accum_gyro_x;
+    m_gyro_accum_y += m_offset_buffer[i].m_accum_gyro_y;
+    m_gyro_accum_z += m_offset_buffer[i].m_accum_gyro_z;
+  }
+  m_gyro_offset_x = m_gyro_accum_x / gyroAverageSize;
+  m_gyro_offset_y = m_gyro_accum_y / gyroAverageSize;
+  m_gyro_offset_z = m_gyro_accum_z / gyroAverageSize;
+  m_integ_gyro_x = 0.0;
+  m_integ_gyro_y = 0.0;
+  m_integ_gyro_z = 0.0;
+  //std::cout << "Avg Size: " << gyroAverageSize << " X off: " << m_gyro_offset_x << " Y off: " << m_gyro_offset_y << " Z off: " << m_gyro_offset_z << std::endl;
 }
 
 int ADIS16448_IMU::SetYawAxis(IMUAxis yaw_axis) {
@@ -268,6 +306,7 @@ int ADIS16448_IMU::SetYawAxis(IMUAxis yaw_axis) {
   }
   else {
     m_yaw_axis = yaw_axis;
+    Reset();
     return 0;
   }
 }
@@ -332,6 +371,7 @@ void ADIS16448_IMU::Close() {
     }
     m_spi = nullptr;
   }
+  delete[] m_offset_buffer;
   std::cout << "Finished cleaning up after the IMU driver." << std::endl;
 }
 
@@ -343,13 +383,16 @@ void ADIS16448_IMU::Acquire() {
   // Set data packet length
   const int dataset_len = 29; // 18 data points + timestamp
 
+  //struct to store accumulate data
+  offset_data sample_data;
+
   // This buffer can contain many datasets
   uint32_t buffer[4000];
   int data_count = 0;
   int data_remainder = 0;
   int data_to_read = 0;
+  int bufferAvgIndex = 0;
   uint32_t previous_timestamp = 0;
-  double delta_angle = 0.0;
   double gyro_x = 0.0;
   double gyro_y = 0.0;
   double gyro_z = 0.0;
@@ -404,8 +447,8 @@ void ADIS16448_IMU::Acquire() {
         calc_crc = (uint16_t)((calc_crc << 8) | (calc_crc >> 8)); // Flip LSB & MSB
         imu_crc = BuffToUShort(&buffer[i + 27]); // Extract DUT CRC from data buffer
 
-        /*// Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
-        if (calc_crc == imu_crc) {*/
+        // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
+        if (calc_crc == imu_crc) {
 
           gyro_x = BuffToShort(&buffer[i + 5]) * 0.04;
           gyro_y = BuffToShort(&buffer[i + 7]) * 0.04;
@@ -418,6 +461,12 @@ void ADIS16448_IMU::Acquire() {
           mag_z = BuffToShort(&buffer[i + 21]) * 0.1429;
           baro = BuffToShort(&buffer[i + 23]) * 0.02;
           temp = BuffToShort(&buffer[i + 25]) * 0.07386 + 31.0;
+
+          /*std::cout << BuffToShort(&buffer[i + 3]) << "," << BuffToShort(&buffer[i + 5]) << "," << BuffToShort(&buffer[i + 7]) <<
+          "," << BuffToShort(&buffer[i + 9]) << "," << BuffToShort(&buffer[i + 11]) << "," << BuffToShort(&buffer[i + 13]) << "," <<
+          BuffToShort(&buffer[i + 15]) << "," << BuffToShort(&buffer[i + 17]) << "," << BuffToShort(&buffer[i + 19]) << "," <<
+          BuffToShort(&buffer[i + 21]) << "," << BuffToShort(&buffer[i + 23]) << "," << BuffToShort(&buffer[i + 25]) << "," <<
+          BuffToShort(&buffer[i + 27]) << std::endl; */
 
           // Convert scaled sensor data to SI units
           gyro_x_si = gyro_x * deg_to_rad;
@@ -433,19 +482,19 @@ void ADIS16448_IMU::Acquire() {
           m_alpha = m_tau / (m_tau + m_dt);
 
           if (m_first_run) {
-            accelAngleX = atan2f(accel_x_si, sqrtf((accel_y_si * accel_y_si) + (accel_z_si * accel_z_si)));
-            accelAngleY = atan2f(accel_y_si, sqrtf((accel_x_si * accel_x_si) + (accel_z_si * accel_z_si)));
+            accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
             compAngleX = accelAngleX;
             compAngleY = accelAngleY;
           }
           else {
             // Process X angle
-            accelAngleX = atan2f(accel_x_si, sqrtf((accel_y_si * accel_y_si) + (accel_z_si * accel_z_si)));
-            accelAngleY = atan2f(accel_y_si, sqrtf((accel_x_si * accel_x_si) + (accel_z_si * accel_z_si)));
-            accelAngleX = FormatAccelRange(accelAngleX, accel_z_si);
-            accelAngleY = FormatAccelRange(accelAngleY, accel_z_si);
+            accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleX = FormatAccelRange(accelAngleX, -accel_z_si);
+            accelAngleY = FormatAccelRange(accelAngleY, -accel_z_si);
             compAngleX = CompFilterProcess(compAngleX, accelAngleX, -gyro_y_si);
-            compAngleY = CompFilterProcess(compAngleY, accelAngleY, gyro_x_si);
+            compAngleY = CompFilterProcess(compAngleY, accelAngleY, -gyro_x_si);
           }
 
           // Update global state
@@ -458,38 +507,42 @@ void ADIS16448_IMU::Acquire() {
             }
             else {
               // Accumulate gyro for offset calibration
-              ++m_offset_data::m_accum_count;
-              if (m_offset_data::m_accum_count == m_offset_data::m_offset_buffer.end()) {
-                m_offset_data::m_accum_count = m_offset_data::m_offset_buffer.begin();
-              }
-              m_offset_data::m_accum_gyro_x = gyro_x;
-              m_offset_data::m_accum_gyro_y = gyro_y;
-              m_offset_data::m_accum_gyro_z = gyro_z;
-
-              // Accumulate gyro for angle integration
+              // Build most recent sample data
+              sample_data.m_accum_gyro_x = gyro_x;
+              sample_data.m_accum_gyro_y = gyro_y;
+              sample_data.m_accum_gyro_z = gyro_z;
+              // Add to buffer
+              bufferAvgIndex = m_accum_count % m_avg_size;
+              m_offset_buffer[bufferAvgIndex] = sample_data;
+              // Increment counter
+              m_accum_count++;
+            }
+            if (!m_start_up_mode) {
+              m_gyro_x = gyro_x;
+              m_gyro_y = gyro_y;
+              m_gyro_z = gyro_z;
+              m_accel_x = accel_x;
+              m_accel_y = accel_y;
+              m_accel_z = accel_z;
+              m_mag_x = mag_x;
+              m_mag_y = mag_y;
+              m_mag_z = mag_z;
+              m_baro = baro;
+              m_temp = temp;
+              m_compAngleX = compAngleX * rad_to_deg;
+              m_compAngleY = compAngleY * rad_to_deg;
+              m_accelAngleX = accelAngleX * rad_to_deg;
+              m_accelAngleY = accelAngleY * rad_to_deg;
+              // Accumulate gyro for angle integration and publish to global variables
               m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * m_dt;
               m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * m_dt;
               m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * m_dt;
             }
-            m_gyro_x = gyro_x;
-            m_gyro_y = gyro_y;
-            m_gyro_z = gyro_z;
-            m_accel_x = accel_x;
-            m_accel_y = accel_y;
-            m_accel_z = accel_z;
-            m_mag_x = mag_x;
-            m_mag_y = mag_y;
-            m_mag_z = mag_z;
-            m_baro = baro;
-            m_temp = temp;
-            m_compAngleX = compAngleX * rad_to_deg;
-            m_compAngleY = compAngleY * rad_to_deg;
-            m_accelAngleX = accelAngleX * rad_to_deg;
-            m_accelAngleY = accelAngleY * rad_to_deg;
           }
           m_first_run = false;
-        /*}
+        }
         else {
+          /*
           // Print notification when crc fails and bad data is rejected
           std::cout << "IMU Data CRC Mismatch Detected." << std::endl;
           std::cout << "Calculated CRC: " << calc_crc << std::endl;
@@ -499,8 +552,8 @@ void ADIS16448_IMU::Acquire() {
           "," << BuffToUShort(&buffer[i + 9]) << "," << BuffToUShort(&buffer[i + 11]) << "," << BuffToUShort(&buffer[i + 13]) << "," <<
           BuffToUShort(&buffer[i + 15]) << "," << BuffToUShort(&buffer[i + 17]) << "," << BuffToUShort(&buffer[i + 19]) << "," <<
           BuffToUShort(&buffer[i + 21]) << "," << BuffToUShort(&buffer[i + 23]) << "," << BuffToUShort(&buffer[i + 25]) << "," <<
-          BuffToUShort(&buffer[i + 27]) << std::endl; 
-        }*/
+          BuffToUShort(&buffer[i + 27]) << std::endl; */
+        }
       }
     }
     else {
@@ -509,7 +562,6 @@ void ADIS16448_IMU::Acquire() {
       data_remainder = 0;
       data_to_read = 0;
       previous_timestamp = 0.0;
-      delta_angle = 0.0;
       gyro_x = 0.0;
       gyro_y = 0.0;
       gyro_z = 0.0;
