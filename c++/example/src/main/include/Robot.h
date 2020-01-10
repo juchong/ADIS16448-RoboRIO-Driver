@@ -29,7 +29,7 @@ class Robot : public frc::TimedRobot {
   const std::string kAutoNameDefault = "Default";
   const std::string kAutoNameCustom = "My Auto";
   std::string m_autoSelected;
-  frc::ADIS16470_IMU m_imu{};
+  frc::ADIS16448_IMU m_imu{};
   frc::SendableChooser<std::string> m_yawChooser;
   const std::string kYawDefault = "Z-Axis";
   const std::string kYawXAxis = "X-Axis";

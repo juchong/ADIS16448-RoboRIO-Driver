@@ -45,7 +45,7 @@ void Robot::RobotPeriodic() {
 
   // Set IMU settings
   if (m_configCal) {
-    m_imu.ConfigCalTime(frc::ADIS16448CalibrationTime::_8s);
+    m_imu.ConfigCalTime(8);
     m_configCal = frc::SmartDashboard::PutBoolean("ConfigCal", false);
   }
   if (m_reset) {
