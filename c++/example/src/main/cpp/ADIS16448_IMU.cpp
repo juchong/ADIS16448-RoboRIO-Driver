@@ -429,8 +429,7 @@ void ADIS16448_IMU::Acquire() {
 
       // Could be multiple data sets in the buffer. Handle each one.
       for (int i = 0; i < data_to_read; i += dataset_len) { 
-        // Timestamp is at buffer[i]
-        m_dt = (buffer[i] - previous_timestamp) / 1000000.0;
+
 
         // Calculate CRC-16 on each data packet
         uint16_t calc_crc = 0xFFFF; // Starting word
@@ -450,6 +449,9 @@ void ADIS16448_IMU::Acquire() {
         // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
         if (calc_crc == imu_crc) {
 
+          // Timestamp is at buffer[i]
+          m_dt = (buffer[i] - previous_timestamp) / 1000000.0;
+          // Split array and scale data
           gyro_x = BuffToShort(&buffer[i + 5]) * 0.04;
           gyro_y = BuffToShort(&buffer[i + 7]) * 0.04;
           gyro_z = BuffToShort(&buffer[i + 9]) * 0.04;
@@ -475,12 +477,11 @@ void ADIS16448_IMU::Acquire() {
           accel_x_si = accel_x * grav;
           accel_y_si = accel_y * grav;
           accel_z_si = accel_z * grav;
-
           // Store timestamp for next iteration
           previous_timestamp = buffer[i];
-
+          // Calculate alpha for use with the complementary filter
           m_alpha = m_tau / (m_tau + m_dt);
-
+          // Calculate complementary filter
           if (m_first_run) {
             accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
             accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
@@ -488,7 +489,6 @@ void ADIS16448_IMU::Acquire() {
             compAngleY = accelAngleY;
           }
           else {
-            // Process X angle
             accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
             accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
             accelAngleX = FormatAccelRange(accelAngleX, -accel_z_si);
@@ -497,9 +497,10 @@ void ADIS16448_IMU::Acquire() {
             compAngleY = CompFilterProcess(compAngleY, accelAngleY, -gyro_x_si);
           }
 
-          // Update global state
+          // Update global variables and state
           {
             std::lock_guard<wpi::mutex> sync(m_mutex);
+            // Ignore first, integrated sample
             if (m_first_run) {
               m_integ_gyro_x = 0.0;
               m_integ_gyro_y = 0.0;
@@ -517,6 +518,7 @@ void ADIS16448_IMU::Acquire() {
               // Increment counter
               m_accum_count++;
             }
+            // Don't post accumulated data to the global variables until an initial gyro offset has been calculated
             if (!m_start_up_mode) {
               m_gyro_x = gyro_x;
               m_gyro_y = gyro_y;
