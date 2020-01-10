@@ -40,5 +40,5 @@ Click on the language you're looking to use above. Each folder includes instruct
 
 ## Can I order my own PCB? Where can I find the schematic?
 
-The schematic, layout, and manufacturing files can be found in this repository under `docs/PCB Reference Files/`. 
+The schematic, layout, and manufacturing files can be found in this repository under `hardware/`. 
 Copies of this board may be purchased from OSH Park using this [link](https://oshpark.com/shared_projects/G8nquDEx). 
