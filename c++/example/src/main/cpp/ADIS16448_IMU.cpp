@@ -208,7 +208,7 @@ void ADIS16448_IMU::InitOffsetBuffer(int size){
   * special FPGA hardware to react to an external data ready (GPIO) input. Data captured using auto SPI
   * is buffered in the FPGA and can be read by the CPU asynchronously. Standard SPI transactions are
   * impossible on the selected SPI port once auto SPI is enabled. The stall settings, GPIO interrupt pin,
-  * and data packet settings used in this function are hard-coded to work only with the ADIS16470 IMU.
+  * and data packet settings used in this function are hard-coded to work only with the ADIS16448 IMU.
  **/
 bool ADIS16448_IMU::SwitchToAutoSPI(){
 
