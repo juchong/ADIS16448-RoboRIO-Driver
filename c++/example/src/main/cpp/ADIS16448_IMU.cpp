@@ -34,6 +34,10 @@ static inline uint16_t BuffToUShort(const uint32_t* buf) {
   return ((uint16_t)(buf[0]) << 8) | buf[1];
 }
 
+static inline uint8_t BuffToUByte(const uint32_t* buf) {
+  return ((uint8_t)buf[0]);
+}
+
 static inline int16_t BuffToShort(const uint32_t* buf) {
   return ((int16_t)(buf[0]) << 8) | buf[1];
 }
@@ -197,13 +201,17 @@ bool ADIS16448_IMU::SwitchToAutoSPI(){
   // Set auto SPI packet data and size
   m_spi->SetAutoTransmitData(GLOB_CMD, 27);
   // Configure auto stall time  
-  m_spi->ConfigureAutoStall(HAL_SPI_kMXP, 5, 1000, 1);
+  m_spi->ConfigureAutoStall(HAL_SPI_kMXP, 100, 1000, 255);
   // Kick off DMA SPI (Note: Device configration impossible after SPI DMA is activated)
   m_spi->StartAutoTrigger(*m_auto_interrupt, true, false);
   // Check to see if the acquire thread is running. If not, kick one off.
   if(!m_thread_idle) {
     m_first_run = true;
     m_thread_active = true;
+    // Set up circular buffer
+    std::vector<m_offset_data> m_offset_buffer(m_avg_size);
+    std::vector<m_offset_data>::iterator m_offset_counter = m_offset_buffer.begin();
+    // Kick off acquire thread
     m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
     std::cout << "New IMU Processing thread activated!" << std::endl;
   }
@@ -232,27 +240,26 @@ int ADIS16448_IMU::ConfigCalTime(int new_cal_time) {
   }
   else {
     m_calibration_time = (uint16_t)new_cal_time;
+    m_avg_size = m_calibration_time * 819;
     return 0;
   }
 }
 
 //TODO: Fix this after I figure out how to implement the cal
 void ADIS16448_IMU::Calibrate() {
+  int buf_sumx = 0;
+  int buf_sumy = 0;
+  int buf_sumz = 0;
+  for (std::vector<m_offset_data>::const_iterator n = m_offset_buffer.begin(); n != m_offset_buffer.end(); ++n)
   {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_accum_count = 0;
-    m_accum_gyro_x = 0.0;
-    m_accum_gyro_y = 0.0;
-    m_accum_gyro_z = 0.0;
+    buf_sumx += n->m_accum_gyro_x;
+    buf_sumy += n->m_accum_gyro_y;
+    buf_sumz += n->m_accum_gyro_z;
   }
-
-  Wait(1);
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_gyro_offset_x = m_accum_gyro_x / m_accum_count;
-    m_gyro_offset_y = m_accum_gyro_y / m_accum_count;
-    m_gyro_offset_z = m_accum_gyro_z / m_accum_count;
-  }
+  std::lock_guard<wpi::mutex> sync(m_mutex);
+  m_gyro_offset_x = buf_sumx / (float)m_offset_buffer.size());
+  m_gyro_offset_y = buf_sumy / (float)m_offset_buffer.size());
+  m_gyro_offset_z = buf_sumz / (float)m_offset_buffer.size());
 }
 
 int ADIS16448_IMU::SetYawAxis(IMUAxis yaw_axis) {
@@ -337,7 +344,7 @@ void ADIS16448_IMU::Acquire() {
   const int dataset_len = 29; // 18 data points + timestamp
 
   // This buffer can contain many datasets
-  uint32_t buffer[2000];
+  uint32_t buffer[4000];
   int data_count = 0;
   int data_remainder = 0;
   int data_to_read = 0;
@@ -381,35 +388,36 @@ void ADIS16448_IMU::Acquire() {
       for (int i = 0; i < data_to_read; i += dataset_len) { 
         // Timestamp is at buffer[i]
         m_dt = (buffer[i] - previous_timestamp) / 1000000.0;
+
         // Calculate CRC-16 on each data packet
         uint16_t calc_crc = 0xFFFF; // Starting word
-        uint16_t byte = 0;
+        uint8_t byte = 0;
         uint16_t imu_crc = 0;
-        for(int k = 4; k < 26; k += 2 ) // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
+        for(int k = 5; k < 27; k += 2 ) // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
         {
-          byte = buffer[i + k + 1]; // Process LSB
+          byte = BuffToUByte(&buffer[i + k + 1]); // Process LSB
           calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
-          byte = buffer[i + k]; // Process MSB
+          byte = BuffToUByte(&buffer[i + k]); // Process MSB
           calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
         }
         calc_crc = ~calc_crc; // Complement
         calc_crc = (uint16_t)((calc_crc << 8) | (calc_crc >> 8)); // Flip LSB & MSB
-        imu_crc = BuffToUShort(&buffer[i + 26]); // Extract DUT CRC from data buffer
+        imu_crc = BuffToUShort(&buffer[i + 27]); // Extract DUT CRC from data buffer
 
-        // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
-        if (calc_crc == imu_crc) {
+        /*// Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
+        if (calc_crc == imu_crc) {*/
 
-          gyro_x = BuffToShort(&buffer[i + 4]) * 0.04;
-          gyro_y = BuffToShort(&buffer[i + 6]) * 0.04;
-          gyro_z = BuffToShort(&buffer[i + 8]) * 0.04;
-          accel_x = BuffToShort(&buffer[i + 10]) * 0.833;
-          accel_y = BuffToShort(&buffer[i + 12]) * 0.833;
-          accel_z = BuffToShort(&buffer[i + 14]) * 0.833;
-          mag_x = BuffToShort(&buffer[i + 16]) * 0.1429;
-          mag_y = BuffToShort(&buffer[i + 18]) * 0.1429;
-          mag_z = BuffToShort(&buffer[i + 20]) * 0.1429;
-          baro = BuffToShort(&buffer[i + 22]) * 0.02;
-          temp = BuffToShort(&buffer[i + 24]) * 0.07386 + 31.0;
+          gyro_x = BuffToShort(&buffer[i + 5]) * 0.04;
+          gyro_y = BuffToShort(&buffer[i + 7]) * 0.04;
+          gyro_z = BuffToShort(&buffer[i + 9]) * 0.04;
+          accel_x = BuffToShort(&buffer[i + 11]) * 0.833;
+          accel_y = BuffToShort(&buffer[i + 13]) * 0.833;
+          accel_z = BuffToShort(&buffer[i + 15]) * 0.833;
+          mag_x = BuffToShort(&buffer[i + 17]) * 0.1429;
+          mag_y = BuffToShort(&buffer[i + 19]) * 0.1429;
+          mag_z = BuffToShort(&buffer[i + 21]) * 0.1429;
+          baro = BuffToShort(&buffer[i + 23]) * 0.02;
+          temp = BuffToShort(&buffer[i + 25]) * 0.07386 + 31.0;
 
           // Convert scaled sensor data to SI units
           gyro_x_si = gyro_x * deg_to_rad;
@@ -444,19 +452,19 @@ void ADIS16448_IMU::Acquire() {
           {
             std::lock_guard<wpi::mutex> sync(m_mutex);
             if (m_first_run) {
-              m_accum_gyro_x = 0.0;
-              m_accum_gyro_y = 0.0;
-              m_accum_gyro_z = 0.0;
               m_integ_gyro_x = 0.0;
               m_integ_gyro_y = 0.0;
               m_integ_gyro_z = 0.0;
             }
             else {
               // Accumulate gyro for offset calibration
-              ++m_accum_count;
-              m_accum_gyro_x += gyro_x;
-              m_accum_gyro_y += gyro_y;
-              m_accum_gyro_z += gyro_z;
+              ++m_offset_data::m_accum_count;
+              if (m_offset_data::m_accum_count == m_offset_data::m_offset_buffer.end()) {
+                m_offset_data::m_accum_count = m_offset_data::m_offset_buffer.begin();
+              }
+              m_offset_data::m_accum_gyro_x = gyro_x;
+              m_offset_data::m_accum_gyro_y = gyro_y;
+              m_offset_data::m_accum_gyro_z = gyro_z;
 
               // Accumulate gyro for angle integration
               m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * m_dt;
@@ -480,11 +488,19 @@ void ADIS16448_IMU::Acquire() {
             m_accelAngleY = accelAngleY * rad_to_deg;
           }
           m_first_run = false;
-        }
+        /*}
         else {
           // Print notification when crc fails and bad data is rejected
-          std::cout << "IMU Data CRC Mismatch - " << calc_crc << "," << imu_crc << " - Data Ignored and Integration Time Adjusted" << std::endl;
-        }
+          std::cout << "IMU Data CRC Mismatch Detected." << std::endl;
+          std::cout << "Calculated CRC: " << calc_crc << std::endl;
+          std::cout << "Read CRC: " << imu_crc << std::endl;
+          // DEBUG: Plot sub-array data in terminal
+          std::cout << BuffToUShort(&buffer[i + 3]) << "," << BuffToUShort(&buffer[i + 5]) << "," << BuffToUShort(&buffer[i + 7]) <<
+          "," << BuffToUShort(&buffer[i + 9]) << "," << BuffToUShort(&buffer[i + 11]) << "," << BuffToUShort(&buffer[i + 13]) << "," <<
+          BuffToUShort(&buffer[i + 15]) << "," << BuffToUShort(&buffer[i + 17]) << "," << BuffToUShort(&buffer[i + 19]) << "," <<
+          BuffToUShort(&buffer[i + 21]) << "," << BuffToUShort(&buffer[i + 23]) << "," << BuffToUShort(&buffer[i + 25]) << "," <<
+          BuffToUShort(&buffer[i + 27]) << std::endl; 
+        }*/
       }
     }
     else {

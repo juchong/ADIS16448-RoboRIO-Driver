@@ -249,10 +249,13 @@ private:
   double m_compAngleX, m_compAngleY, m_accelAngleX, m_accelAngleY = 0.0;
 
   // Accumulated gyro values (for offset calculation)
-  int m_accum_count = 0;
-  double m_accum_gyro_x = 0.0;
-  double m_accum_gyro_y = 0.0;
-  double m_accum_gyro_z = 0.0;
+  int m_avg_size = 0;
+  struct m_offset_data {
+    double m_accum_gyro_x = 0.0;
+    double m_accum_gyro_y = 0.0;
+    double m_accum_gyro_z = 0.0;
+    int m_accum_count = 0;
+  };
 
   // Integrated gyro values
   double m_integ_gyro_x = 0.0;
