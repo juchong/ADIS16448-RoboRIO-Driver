@@ -21,7 +21,6 @@
 #include <frc/SPI.h>
 #include <frc/ErrorBase.h>
 #include <adi/ADIS16448_IMU.h>
-#include <frc/smartdashboard/SendableBuilder.h>
 #include <frc/Timer.h>
 #include <frc/WPIErrors.h>
 #include <hal/HAL.h>
@@ -105,12 +104,11 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time
   DriverStation::ReportWarning("ADIS16448 IMU Successfully Initialized!");
 
   //TODO: Find what the proper pin is to turn this LED
-  // Drive SPI CS3 (IMU ready LED) low (active low)
-  new DigitalOutput(28); 
+  // Drive MXP PWM5 (IMU ready LED) low (active low)
+  new DigitalOutput(19); 
 
   // Report usage and post data to DS
   HAL_Report(HALUsageReporting::kResourceType_ADIS16448, 0);
-  SetName("ADIS16448", 0);
 }
 
 /**
@@ -406,7 +404,7 @@ void ADIS16448_IMU::Acquire() {
   double temp = 0.0;
   double gyro_x_si = 0.0;
   double gyro_y_si = 0.0;
-  double gyro_z_si = 0.0;
+  //double gyro_z_si = 0.0;
   double accel_x_si = 0.0;
   double accel_y_si = 0.0;
   double accel_z_si = 0.0;
@@ -473,7 +471,7 @@ void ADIS16448_IMU::Acquire() {
           // Convert scaled sensor data to SI units
           gyro_x_si = gyro_x * deg_to_rad;
           gyro_y_si = gyro_y * deg_to_rad;
-          gyro_z_si = gyro_z * deg_to_rad;
+          //gyro_z_si = gyro_z * deg_to_rad;
           accel_x_si = accel_x * grav;
           accel_y_si = accel_y * grav;
           accel_z_si = accel_z * grav;
@@ -577,7 +575,7 @@ void ADIS16448_IMU::Acquire() {
       temp = 0.0;
       gyro_x_si = 0.0;
       gyro_y_si = 0.0;
-      gyro_z_si = 0.0;
+      //gyro_z_si = 0.0;
       accel_x_si = 0.0;
       accel_y_si = 0.0;
       accel_z_si = 0.0;
@@ -753,28 +751,4 @@ double ADIS16448_IMU::GetBarometricPressure() const {
 double ADIS16448_IMU::GetTemperature() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_temp;
-}
-
-void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
-  builder.SetSmartDashboardType("ADIS16448 IMU");
-  auto gyroX = builder.GetEntry("GyroX").GetHandle();
-  auto gyroY = builder.GetEntry("GyroY").GetHandle();
-  auto gyroZ = builder.GetEntry("GyroZ").GetHandle();
-  auto accelX = builder.GetEntry("AccelX").GetHandle();
-  auto accelY = builder.GetEntry("AccelY").GetHandle();
-  auto accelZ = builder.GetEntry("AccelZ").GetHandle();
-  auto angleX = builder.GetEntry("AngleX").GetHandle();
-  auto angleY = builder.GetEntry("AngleY").GetHandle();
-  auto angleZ = builder.GetEntry("AngleZ").GetHandle();
-  builder.SetUpdateTable([=]() {
-	nt::NetworkTableEntry(gyroX).SetDouble(GetGyroInstantX());
-	nt::NetworkTableEntry(gyroY).SetDouble(GetGyroInstantY());
-	nt::NetworkTableEntry(gyroZ).SetDouble(GetGyroInstantZ());
-	nt::NetworkTableEntry(accelX).SetDouble(GetAccelInstantX());
-	nt::NetworkTableEntry(accelY).SetDouble(GetAccelInstantY());
-	nt::NetworkTableEntry(accelZ).SetDouble(GetAccelInstantZ());
-	nt::NetworkTableEntry(angleX).SetDouble(GetGyroAngleX());
-	nt::NetworkTableEntry(angleY).SetDouble(GetGyroAngleY());
-	nt::NetworkTableEntry(angleZ).SetDouble(GetGyroAngleZ());
-  });
 }

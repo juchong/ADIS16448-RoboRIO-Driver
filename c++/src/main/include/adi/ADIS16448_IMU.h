@@ -19,9 +19,13 @@
 #include <frc/DigitalInput.h>
 #include <frc/GyroBase.h>
 #include <frc/SPI.h>
-#include <frc/smartdashboard/SendableBuilder.h>
 #include <wpi/mutex.h>
 #include <wpi/condition_variable.h>
+
+// Not always defined in cmath (not part of standard)
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
 
 namespace frc {
 
@@ -206,8 +210,6 @@ class ADIS16448_IMU : public GyroBase {
     IMUAxis GetYawAxis() const;
 
     int SetYawAxis(IMUAxis yaw_axis);
-
-    void InitSendable(SendableBuilder& builder) override;
 
 private:
 

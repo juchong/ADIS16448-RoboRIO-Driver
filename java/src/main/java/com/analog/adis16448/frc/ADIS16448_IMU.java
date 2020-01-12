@@ -202,9 +202,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
   }
 
   /**
-   * @param yaw_axis  Which axis is Yaw
-   * @param algorithm Use {@link #calculateComplementary} or
-   *                  {@link #calculateMadgwick} algorithm
+   *
    */
   public ADIS16448_IMU(final IMUAxis yaw_axis, SPI.Port port, int cal_time) {
     m_yaw_axis = yaw_axis;
@@ -258,10 +256,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
     HAL.report(tResourceType.kResourceType_ADIS16448, 0);
   }
 
-    /**
+  /**
    * 
-   * @param buf
-   * @return
    */
   private static int toUShort(ByteBuffer buf) {
     return (buf.getShort(0)) & 0xFFFF;
@@ -269,8 +265,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @param buf
-   * @return
    */
   private static int toUShort(byte[] buf) {
     return (((buf[0] & 0xFF) << 8) + ((buf[1] & 0xFF) << 0));
@@ -286,8 +280,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @param sint
-   * @return
    */
   private static long toULong(int sint) {
     return sint & 0x00000000FFFFFFFFL;
@@ -295,8 +287,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @param buf
-   * @return
    */
   private static int toShort(int... buf) {
     return (short)(((buf[0] & 0xFF) << 8) + ((buf[1] & 0xFF) << 0));
@@ -304,8 +294,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @param buf
-   * @return
    */
   private static int toShort(byte[] buf) {
     return buf[0] << 8 | buf[1];
@@ -313,17 +301,13 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @param buf
-   * @return
    */
   private static int toInt(int... buf) {
     return (int)((buf[0] & 0xFF) << 24 | (buf[1] & 0xFF) << 16 | (buf[2] & 0xFF) << 8 | (buf[3] & 0xFF));
   }
 
   /**
-   * Switch to standard SPI mode.
    * 
-   * @return
    */
   private boolean switchToStandardSPI() {
     // Check to see whether the acquire thread is active. If so, wait for it to stop producing data.
@@ -384,7 +368,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
 
   /**
    * 
-   * @return
    */
   boolean switchToAutoSPI() {
     // No SPI port has been set up. Go set one up first.
