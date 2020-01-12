@@ -20,9 +20,52 @@ These software libraries provide the user (you) with:
 
 Tutorial videos, how-to guides, and additional resources can be found on the [ADI FIRST Robotics Wiki Page](https://wiki.analog.com/first/first_robotics_donation_resources).
 
-## What programming languages are supported?
+## How do I install this library?
 
-The IMU driver currently supports all three official FRC languages (C++, Java, and LabVIEW). LabVIEW libraries should be installed using the NI Package Manager.  C++ and Java libraries should be installed by copying the source files into your VSCode project, or by using maven.
+The IMU driver currently supports all three official FRC languages (C++, Java, and LabVIEW). 
+
+#### C++ and Java Users (Online Install): 
+
+You can use the online method to install the latest C++ and Java API if your development machine can be connected to the internet:
+
+1. Open your robot project in WPILib VSCode
+2. Click on the WPI icon in the corner to open the WPI Command Pallet
+3. Select **Manage vendor libraries**
+4. Select **Install new library (online)**
+5. Enter the installation URL listed below and press ENTER
+
+http://maven.highcurrent.io/vendordeps/ADIS16448.json
+
+6. Be sure to check out the example repository if you have questions about the installation
+
+https://github.com/juchong/ADIS16448-RoboRIO-Driver-Examples
+   
+#### C++ and Java Users (Offline Install): 
+An offline installation option is available for users whose machines do not have acces to the internet:
+
+1. Open your robot project in WPILib VSCode
+2. Click on the WPI icon in the corner to open the WPI Command Pallet
+3. Select **Manage vendor libraries** 
+4. Select **Install new library (offline)**
+5. Enter the path to the latest .zip file downloaded from the releases page of this repository [link](https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases)
+
+#### LabVIEW Users:
+
+LabVIEW libraries should be installed using the NI Package Manager. Check out the releases page for the latest package installer.
+
+https://github.com/juchong/ADIS16448-RoboRIO-Driver/releases
+
+Additional LabVIEW instructions and API details can be found in the LabVIEW subdirectory in this repository. 
+
+https://github.com/juchong/ADIS16448-RoboRIO-Driver/tree/master/LabVIEW
+
+## Is the API documented?
+
+Doxygen coming soon!
+
+## Can I order my own PCB? Where can I find details about the circuit board?
+The schematic, layout, and manufacturing files can be found in this repository under `hardware/PCB Reference Files/`. 
+Copies of this board may be purchased from OSH Park by following this [link](https://oshpark.com/shared_projects/G8nquDEx).
 
 ## What do I need to get started?
 
@@ -33,12 +76,3 @@ Plug in the expansion board as shown below. **Be careful not to offset the conne
 **Your RoboRIO should be imaged to match the version of the NI Update Suite installed on your PC.** For example, if you have the latest (of this writing) update suite installed (2020.0.0), then you must also have the **FRC_roboRIO_2020_v10** image and **roboRIO_6.0.0f1** firmware installed. This driver relies heavily on the FPGA image loaded in the RoboRIO and _**will not work**_ on older versions. The most current NI Update Suite can be found [here](https://www.ni.com/en-us/support/downloads/drivers/download.frc-game-tools.html#333285).
 
 ![ADIS16448 Breakout Board Installed on a RoboRIO](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/docs/IMG_5514.JPG)
-
-## How do I use the IMU with my programming language?
-
-Click on the language you're looking to use above. Each folder includes instructions specific to the language specified. If you're looking for more information on using the sensor, be sure to check out the [ADI FIRST Robotics Wiki Page](https://wiki.analog.com/first/first_robotics_donation_resources).
-
-## Can I order my own PCB? Where can I find the schematic?
-
-The schematic, layout, and manufacturing files can be found in this repository under `hardware/`. 
-Copies of this board may be purchased from OSH Park using this [link](https://oshpark.com/shared_projects/G8nquDEx). 
