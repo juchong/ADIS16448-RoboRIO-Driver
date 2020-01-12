@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-import com.analog.adis16470.frc.ADIS16470_IMU;
+import com.analog.adis16448.frc.ADIS16448_IMU;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -30,7 +30,7 @@ public class Robot extends TimedRobot {
   private static final String kYawXAxis = "X-Axis";
   private static final String kYawYAxis = "Y-Axis";
   private String m_yawSelected;
-  private ADIS16470_IMU.IMUAxis m_yawActiveAxis;
+  private ADIS16448_IMU.IMUAxis m_yawActiveAxis;
   private final SendableChooser<String> m_yawChooser = new SendableChooser<>();
 
   private boolean m_runCal = false;
@@ -38,7 +38,7 @@ public class Robot extends TimedRobot {
   private boolean m_reset = false;
   private boolean m_setYawAxis = false;
 
-  private final ADIS16470_IMU m_imu = new ADIS16470_IMU();
+  private final ADIS16448_IMU m_imu = new ADIS16448_IMU();
 
   /**
    * This function is run when the robot is first started up and should be
@@ -81,7 +81,7 @@ public class Robot extends TimedRobot {
 
     // Set IMU settings
     if (m_configCal) {
-      m_imu.configCalTime(ADIS16470_IMU.ADIS16470CalibrationTime._8s);
+      m_imu.configCalTime(ADIS16448_IMU.ADIS16448CalibrationTime._8s);
       m_configCal = SmartDashboard.putBoolean("ConfigCal", false);
     }
     if (m_reset) {
@@ -95,13 +95,13 @@ public class Robot extends TimedRobot {
     
     // Read the desired yaw axis from the dashboard
     if (m_yawSelected == "X-Axis") {
-      m_yawActiveAxis = ADIS16470_IMU.IMUAxis.kX;
+      m_yawActiveAxis = ADIS16448_IMU.IMUAxis.kX;
     }
     else if (m_yawSelected == "Y-Axis") {
-      m_yawActiveAxis = ADIS16470_IMU.IMUAxis.kY;
+      m_yawActiveAxis = ADIS16448_IMU.IMUAxis.kY;
     }
     else {
-      m_yawActiveAxis = ADIS16470_IMU.IMUAxis.kZ;
+      m_yawActiveAxis = ADIS16448_IMU.IMUAxis.kZ;
     }
     // Set the desired yaw axis from the dashboard
     if (m_setYawAxis) {

@@ -1,15 +1,16 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) 2016-2018 FIRST. All Rights Reserved.                        */
+/* Copyright (c) 2016-2020 Analog Devices Inc. All Rights Reserved.           */
 /* Open Source Software - may be modified and shared by FRC teams. The code   */
 /* must be accompanied by the FIRST BSD license file in the root directory of */
 /* the project.                                                               */
 /*                                                                            */
-/* Modified by Juan Chong - juan.chong@analog.com                             */
+/* Modified by Juan Chong - frcsupport@analog.com                             */
 /*----------------------------------------------------------------------------*/
 
 #include <string>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 #include <frc/DigitalInput.h>
 #include <frc/DigitalSource.h>
@@ -25,65 +26,22 @@
 #include <frc/WPIErrors.h>
 #include <hal/HAL.h>
 
-// Not always defined in cmath (not part of standard)
-#ifndef M_PI
-    #define M_PI 3.14159265358979323846
-#endif
+/* Helpful conversion functions */
+static inline int32_t ToInt(const uint32_t *buf){
+  return (int32_t)( (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3] );
+}
 
-// CRC-16 Look-Up Table
-const uint16_t adiscrc[256] = {
-0x0000, 0x17CE, 0x0FDF, 0x1811, 0x1FBE, 0x0870, 0x1061, 0x07AF,
-0x1F3F, 0x08F1, 0x10E0, 0x072E, 0x0081, 0x174F, 0x0F5E, 0x1890,
-0x1E3D, 0x09F3, 0x11E2, 0x062C, 0x0183, 0x164D, 0x0E5C, 0x1992,
-0x0102, 0x16CC, 0x0EDD, 0x1913, 0x1EBC, 0x0972, 0x1163, 0x06AD,
-0x1C39, 0x0BF7, 0x13E6, 0x0428, 0x0387, 0x1449, 0x0C58, 0x1B96,
-0x0306, 0x14C8, 0x0CD9, 0x1B17, 0x1CB8, 0x0B76, 0x1367, 0x04A9,
-0x0204, 0x15CA, 0x0DDB, 0x1A15, 0x1DBA, 0x0A74, 0x1265, 0x05AB,
-0x1D3B, 0x0AF5, 0x12E4, 0x052A, 0x0285, 0x154B, 0x0D5A, 0x1A94,
-0x1831, 0x0FFF, 0x17EE, 0x0020, 0x078F, 0x1041, 0x0850, 0x1F9E,
-0x070E, 0x10C0, 0x08D1, 0x1F1F, 0x18B0, 0x0F7E, 0x176F, 0x00A1,
-0x060C, 0x11C2, 0x09D3, 0x1E1D, 0x19B2, 0x0E7C, 0x166D, 0x01A3,
-0x1933, 0x0EFD, 0x16EC, 0x0122, 0x068D, 0x1143, 0x0952, 0x1E9C,
-0x0408, 0x13C6, 0x0BD7, 0x1C19, 0x1BB6, 0x0C78, 0x1469, 0x03A7,
-0x1B37, 0x0CF9, 0x14E8, 0x0326, 0x0489, 0x1347, 0x0B56, 0x1C98,
-0x1A35, 0x0DFB, 0x15EA, 0x0224, 0x058B, 0x1245, 0x0A54, 0x1D9A,
-0x050A, 0x12C4, 0x0AD5, 0x1D1B, 0x1AB4, 0x0D7A, 0x156B, 0x02A5,
-0x1021, 0x07EF, 0x1FFE, 0x0830, 0x0F9F, 0x1851, 0x0040, 0x178E,
-0x0F1E, 0x18D0, 0x00C1, 0x170F, 0x10A0, 0x076E, 0x1F7F, 0x08B1,
-0x0E1C, 0x19D2, 0x01C3, 0x160D, 0x11A2, 0x066C, 0x1E7D, 0x09B3,
-0x1123, 0x06ED, 0x1EFC, 0x0932, 0x0E9D, 0x1953, 0x0142, 0x168C,
-0x0C18, 0x1BD6, 0x03C7, 0x1409, 0x13A6, 0x0468, 0x1C79, 0x0BB7,
-0x1327, 0x04E9, 0x1CF8, 0x0B36, 0x0C99, 0x1B57, 0x0346, 0x1488,
-0x1225, 0x05EB, 0x1DFA, 0x0A34, 0x0D9B, 0x1A55, 0x0244, 0x158A,
-0x0D1A, 0x1AD4, 0x02C5, 0x150B, 0x12A4, 0x056A, 0x1D7B, 0x0AB5,
-0x0810, 0x1FDE, 0x07CF, 0x1001, 0x17AE, 0x0060, 0x1871, 0x0FBF,
-0x172F, 0x00E1, 0x18F0, 0x0F3E, 0x0891, 0x1F5F, 0x074E, 0x1080,
-0x162D, 0x01E3, 0x19F2, 0x0E3C, 0x0993, 0x1E5D, 0x064C, 0x1182,
-0x0912, 0x1EDC, 0x06CD, 0x1103, 0x16AC, 0x0162, 0x1973, 0x0EBD,
-0x1429, 0x03E7, 0x1BF6, 0x0C38, 0x0B97, 0x1C59, 0x0448, 0x1386,
-0x0B16, 0x1CD8, 0x04C9, 0x1307, 0x14A8, 0x0366, 0x1B77, 0x0CB9,
-0x0A14, 0x1DDA, 0x05CB, 0x1205, 0x15AA, 0x0264, 0x1A75, 0x0DBB,
-0x152B, 0x02E5, 0x1AF4, 0x0D3A, 0x0A95, 0x1D5B, 0x054A, 0x1284
-};
+static inline uint16_t BuffToUShort(const uint32_t* buf) {
+  return ((uint16_t)(buf[0]) << 8) | buf[1];
+}
 
-static constexpr double kCalibrationSampleTime = 5.0; // Calibration time in seconds (regardless of sps)
-static constexpr double kDegreePerSecondPerLSB = 1.0/25.0;
-static constexpr double kGPerLSB = 1.0/1200.0;
-static constexpr double kMilligaussPerLSB = 1.0/7.0;
-static constexpr double kMillibarPerLSB = 0.02;
-static constexpr double kDegCPerLSB = 0.07386;
-static constexpr double kDegCOffset = 31;
+static inline uint8_t BuffToUByte(const uint32_t* buf) {
+  return ((uint8_t)buf[0]);
+}
 
-static constexpr uint8_t kGLOB_CMD = 0x3E;
-static constexpr uint8_t kRegSMPL_PRD = 0x36;
-static constexpr uint8_t kRegSENS_AVG = 0x38;
-static constexpr uint8_t kRegMSC_CTRL = 0x34;
-static constexpr uint8_t kRegPROD_ID = 0x56;
-
-static constexpr double kGyroScale = 0.0174533;   // rad/sec
-static constexpr double kAccelScale = 9.80665;    // mg/sec/sec
-static constexpr double kMagScale = 0.1;          // uTesla
-static constexpr double kBeta = 1;
+static inline int16_t BuffToShort(const uint32_t* buf) {
+  return ((int16_t)(buf[0]) << 8) | buf[1];
+}
 
 static inline uint16_t ToUShort(const uint8_t* buf) {
   return ((uint16_t)(buf[0]) << 8) | buf[1];
@@ -95,9 +53,11 @@ static inline int16_t ToShort(const uint8_t* buf) {
 
 using namespace frc;
 
-ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, kComplementary, SPI::Port::kMXP) {}
+ADIS16448_IMU::ADIS16448_IMU() : ADIS16448_IMU(kZ, SPI::Port::kMXP, 4) {}
 
-ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Port port) : m_algorithm(algorithm), m_yaw_axis(yaw_axis), m_spi(port){
+ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time) : 
+                m_yaw_axis(yaw_axis), 
+                m_spi_port(port){
 
   // Force the IMU reset pin to toggle on startup (doesn't require DS enable)
   // Relies on the RIO hardware by default configuring an output as low
@@ -106,128 +66,287 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, AHRSAlgorithm algorithm, SPI::Por
   DigitalOutput *m_reset_out = new DigitalOutput(18);  // Drive MXP DIO8 low
   Wait(0.01);  // Wait 10ms
   delete m_reset_out;
-  /*DigitalInput *m_reset_in = */new DigitalInput(18);  // Set MXP DIO8 high
+  new DigitalInput(18);  // Set MXP DIO8 high
   Wait(0.5);  // Wait 500ms for reset to complete
 
-  // Set general SPI settings
-  m_spi.SetClockRate(1000000);
-  m_spi.SetMSBFirst();
-  m_spi.SetSampleDataOnTrailingEdge();
-  m_spi.SetClockActiveLow();
-  m_spi.SetChipSelectActiveLow();
+  ConfigCalTime(cal_time);
 
-  ReadRegister(kRegPROD_ID); // Dummy read
-
-  // Validate the product ID
-  if (ReadRegister(kRegPROD_ID) != 16448) {
-    DriverStation::ReportError("Could not find ADIS16448!");
+  // Configure standard SPI
+  if (!SwitchToStandardSPI()) {
     return;
   }
-  else {
-    DriverStation::ReportWarning("ADIS16448 IMU Detected. Starting calibration.");
-  }
 
-  // Set IMU internal decimation to 204.8 SPS
-  WriteRegister(kRegSMPL_PRD, 0x0201);
-
+  // Set IMU internal decimation to 819.2 SPS
+  WriteRegister(SMPL_PRD, 0x0001);
   // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP), PoP, and G sensitivity compensation
-  WriteRegister(kRegMSC_CTRL, 0x0056);
-
+  WriteRegister(MSC_CTRL, 0x0016);
   // Configure IMU internal Bartlett filter
-  WriteRegister(kRegSENS_AVG, 0x0402);
-
-  // Configure interrupt on MXP DIO0
-  DigitalInput *m_interrupt = new DigitalInput(10);
-
-  // Configure DMA SPI
-  m_spi.InitAuto(8200);
-  m_spi.SetAutoTransmitData(kGLOB_CMD,27);
-
-  // Kick off DMA SPI (Note: Device configration impossible after SPI DMA is activated)
-  m_spi.StartAutoTrigger(*m_interrupt,true,false);
-
-  // Start acquisition and calculation threads
-  m_freed = false;
-  m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
-  m_calculate_task = std::thread(&ADIS16448_IMU::Calculate, this);
-
-  // Execute offset calibration on start-up
+  WriteRegister(SENS_AVG, 0x0402);
+  // Clear offset registers
+  WriteRegister(XGYRO_OFF, 0x0000);
+  WriteRegister(YGYRO_OFF, 0x0000);
+  WriteRegister(ZGYRO_OFF, 0x0000);
+  // Configure and enable auto SPI
+  if(!SwitchToAutoSPI()) {
+    return;
+  }
+  // Notify DS that IMU calibration delay is active
+  DriverStation::ReportWarning("ADIS16448 IMU Detected. Starting initial calibration delay.");
+  // Wait for whatever time the user set as the start-up delay
+  Wait((double)m_calibration_time * 1.2);
+  // Execute calibration routine
   Calibrate();
-
-  // Re-initialize accumulations after calibration
+  // Reset accumulated offsets
   Reset();
+  // Tell the acquire loop that we're done starting up
+  m_start_up_mode = false;
 
   // Let the user know the IMU was initiallized successfully
   DriverStation::ReportWarning("ADIS16448 IMU Successfully Initialized!");
+
+  //TODO: Find what the proper pin is to turn this LED
+  // Drive SPI CS3 (IMU ready LED) low (active low)
+  new DigitalOutput(28); 
 
   // Report usage and post data to DS
   HAL_Report(HALUsageReporting::kResourceType_ADIS16448, 0);
   SetName("ADIS16448", 0);
 }
 
-// Adjust yaw axis for AHRS calculations
-void ADIS16448_IMU::Sample::AdjustYawAxis(IMUAxis yaw_axis) {
-  switch (yaw_axis) {
-    case kX: {
-      // swap X and Z
-      std::swap(accel_x, accel_z);
-      std::swap(mag_x, mag_z);
-      std::swap(gyro_x, gyro_z);
-      break;
+/**
+  * @brief Switches to standard SPI operation. Primarily used when exiting auto SPI mode.
+  *
+  * @return A boolean indicating the success or failure of setting up the SPI peripheral in standard SPI mode.
+  *
+  * This function switches the active SPI port to standard SPI and is used primarily when 
+  * exiting auto SPI. Exiting auto SPI is required to read or write using SPI since the 
+  * auto SPI configuration, once active, locks the SPI message being transacted. This function
+  * also verifies that the SPI port is operating in standard SPI mode by reading back the IMU
+  * product ID. 
+ **/
+bool ADIS16448_IMU::SwitchToStandardSPI(){
+  // Check to see whether the acquire thread is active. If so, wait for it to stop producing data.
+  if (m_thread_active) {
+    m_thread_active = false;
+    while (!m_thread_idle) {
+      Wait(0.01);
     }
-    case kY: {
-      // swap Y and Z
-      std::swap(accel_y, accel_z);
-      std::swap(mag_y, mag_z);
-      std::swap(gyro_y, gyro_z);
-      break;
+    std::cout << "Paused the IMU processing thread successfully!" << std::endl;
+    // Maybe we're in auto SPI mode? If so, kill auto SPI, and then SPI.
+    if (m_spi != nullptr && m_auto_configured) {
+      m_spi->StopAuto();
+      // We need to get rid of all the garbage left in the auto SPI buffer after stopping it.
+      // Sometimes data magically reappears, so we have to check the buffer size a couple of times
+      //  to be sure we got it all. Yuck.
+      uint32_t trashBuffer[200];
+      Wait(0.1);
+      int data_count = m_spi->ReadAutoReceivedData(trashBuffer, 0, 0_s);
+      while (data_count > 0) {
+        data_count = m_spi->ReadAutoReceivedData(trashBuffer, 0, 0_s);
+        m_spi->ReadAutoReceivedData(trashBuffer, data_count, 0_s);
+      }
+      std::cout << "Paused the auto SPI successfully!" << std::endl;
+      }
+  }
+  // There doesn't seem to be a SPI port active. Let's try to set one up
+  if (m_spi == nullptr) {
+    std::cout << "Setting up a new SPI port." << std::endl;
+    m_spi = new SPI(m_spi_port);
+    m_spi->SetClockRate(1000000);
+    m_spi->SetMSBFirst();
+    m_spi->SetSampleDataOnTrailingEdge();
+    m_spi->SetClockActiveLow();
+    m_spi->SetChipSelectActiveLow();
+    ReadRegister(PROD_ID); // Dummy read
+
+    // Validate the product ID
+    uint16_t prod_id = ReadRegister(PROD_ID);
+    if (prod_id != 16448) {
+      DriverStation::ReportError("Could not find ADIS16448!");
+      Close();
+      return false;
     }
-    case kZ:
-    default:
-      // no swap required
-      break;
+    return true;
+  }
+  else {
+    // Maybe the SPI port is active, but not in auto SPI mode? Try to read the product ID.
+    ReadRegister(PROD_ID); // Dummy read
+    uint16_t prod_id = ReadRegister(PROD_ID);
+    if (prod_id != 16448) {
+      DriverStation::ReportError("Could not find ADIS16448!");
+      Close();
+      return false;
+    }
+    else {
+      return true;
+    }
   }
 }
 
+void ADIS16448_IMU::InitOffsetBuffer(int size){
+  //avoid exceptions in the case of bad arguments
+  if(size < 1)
+    size = 1;
+
+  //set average size to size (correct bad values)
+  m_avg_size = size;
+
+  //resize vector
+  if(m_offset_buffer != nullptr)
+  {
+    delete[] m_offset_buffer;
+  }
+  m_offset_buffer = new offset_data[size];
+
+  //set accumulate count to 0
+  m_accum_count = 0;
+}
+
+/**
+  * This function switches the active SPI port to auto SPI and is used primarily when 
+  * exiting standard SPI. Auto SPI is required to asynchronously read data over SPI as it utilizes
+  * special FPGA hardware to react to an external data ready (GPIO) input. Data captured using auto SPI
+  * is buffered in the FPGA and can be read by the CPU asynchronously. Standard SPI transactions are
+  * impossible on the selected SPI port once auto SPI is enabled. The stall settings, GPIO interrupt pin,
+  * and data packet settings used in this function are hard-coded to work only with the ADIS16448 IMU.
+ **/
+bool ADIS16448_IMU::SwitchToAutoSPI(){
+
+  // No SPI port has been set up. Go set one up first.
+  if(m_spi == nullptr){
+    if(!SwitchToStandardSPI()){
+      DriverStation::ReportError("Failed to start/restart auto SPI");
+      return false;
+    }
+  }
+  // Only set up the interrupt if needed.
+  if (m_auto_interrupt == nullptr) {
+    m_auto_interrupt = new DigitalInput(10);
+  }
+  // The auto SPI controller gets angry if you try to set up two instances on one bus.
+  if (!m_auto_configured) {
+    m_spi->InitAuto(8200);
+    m_auto_configured = true;
+  }
+  // Set auto SPI packet data and size
+  m_spi->SetAutoTransmitData(GLOB_CMD, 27);
+  // Configure auto stall time  
+  m_spi->ConfigureAutoStall(HAL_SPI_kMXP, 100, 1000, 255);
+  // Kick off DMA SPI (Note: Device configration impossible after SPI DMA is activated)
+  m_spi->StartAutoTrigger(*m_auto_interrupt, true, false);
+  // Check to see if the acquire thread is running. If not, kick one off.
+  if(!m_thread_idle) {
+    m_first_run = true;
+    m_thread_active = true;
+    // Set up circular buffer
+    InitOffsetBuffer(m_avg_size);
+    // Kick off acquire thread
+    m_acquire_task = std::thread(&ADIS16448_IMU::Acquire, this);
+    std::cout << "New IMU Processing thread activated!" << std::endl;
+  }
+  else {
+    m_first_run = true;
+    m_thread_active = true;
+    std::cout << "Old IMU Processing thread re-activated!" << std::endl;
+  }
+  // Looks like the thread didn't start for some reason. Abort.
+  /*
+  if(!m_thread_idle) {
+    DriverStation::ReportError("Failed to start/restart the acquire() thread.");
+    Close();
+    return false;
+  }
+  */
+  return true;
+}
+
+/**
+ *
+ **/
+int ADIS16448_IMU::ConfigCalTime(int new_cal_time) { 
+  if(m_calibration_time == new_cal_time) {
+    return 1;
+  }
+  else {
+    m_calibration_time = (uint16_t)new_cal_time;
+    m_avg_size = m_calibration_time * 819;
+    InitOffsetBuffer(m_avg_size);
+    return 0;
+  }
+}
+
+/**
+ * 
+ **/
 void ADIS16448_IMU::Calibrate() {
+  std::lock_guard<wpi::mutex> sync(m_mutex);
+  // Calculate the running average
+  int gyroAverageSize = std::min(m_accum_count, m_avg_size);
+  double m_gyro_accum_x = 0.0;
+  double m_gyro_accum_y = 0.0;
+  double m_gyro_accum_z = 0.0;
+  for(int i = 0; i < gyroAverageSize; i++)
   {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_accum_count = 0;
-    m_accum_gyro_x = 0.0;
-    m_accum_gyro_y = 0.0;
-    m_accum_gyro_z = 0.0;
+    m_gyro_accum_x += m_offset_buffer[i].m_accum_gyro_x;
+    m_gyro_accum_y += m_offset_buffer[i].m_accum_gyro_y;
+    m_gyro_accum_z += m_offset_buffer[i].m_accum_gyro_z;
   }
+  m_gyro_offset_x = m_gyro_accum_x / gyroAverageSize;
+  m_gyro_offset_y = m_gyro_accum_y / gyroAverageSize;
+  m_gyro_offset_z = m_gyro_accum_z / gyroAverageSize;
+  m_integ_gyro_x = 0.0;
+  m_integ_gyro_y = 0.0;
+  m_integ_gyro_z = 0.0;
+  //std::cout << "Avg Size: " << gyroAverageSize << " X off: " << m_gyro_offset_x << " Y off: " << m_gyro_offset_y << " Z off: " << m_gyro_offset_z << std::endl;
+}
 
-  Wait(kCalibrationSampleTime);
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_gyro_offset_x = m_accum_gyro_x / m_accum_count;
-    m_gyro_offset_y = m_accum_gyro_y / m_accum_count;
-    m_gyro_offset_z = m_accum_gyro_z / m_accum_count;
+int ADIS16448_IMU::SetYawAxis(IMUAxis yaw_axis) {
+  if (m_yaw_axis == yaw_axis) {
+    return 1;
+  }
+  else {
+    m_yaw_axis = yaw_axis;
+    Reset();
+    return 0;
   }
 }
 
+/**
+  * This function reads the contents of an 8-bit register location by transmitting the register location
+  * byte along with a null (0x00) byte using the standard WPILib API. The response (two bytes) is read 
+  * back using the WPILib API and joined using a helper function. This function assumes the controller 
+  * is set to standard SPI mode.
+ **/
 uint16_t ADIS16448_IMU::ReadRegister(uint8_t reg) {
   uint8_t buf[2];
   buf[0] = reg & 0x7f;
   buf[1] = 0;
 
-  m_spi.Write(buf, 2);
-  m_spi.Read(false, buf, 2);
+  m_spi->Write(buf, 2);
+  m_spi->Read(false, buf, 2);
 
   return ToUShort(buf);
 }
 
+/**
+  * This function writes an unsigned, 16-bit value into adjacent 8-bit addresses via SPI. The upper
+  * and lower bytes that make up the 16-bit value are split into two unsined, 8-bit values and written
+  * to the upper and lower addresses of the specified register value. Only the lower (base) address
+  * must be specified. This function assumes the controller is set to standard SPI mode.
+ **/
 void ADIS16448_IMU::WriteRegister(uint8_t reg, uint16_t val) {
   uint8_t buf[2];
   buf[0] = 0x80 | reg;
   buf[1] = val & 0xff;
-  m_spi.Write(buf, 2);
+  m_spi->Write(buf, 2);
   buf[0] = 0x81 | reg;
   buf[1] = val >> 8;
-  m_spi.Write(buf, 2);
+  m_spi->Write(buf, 2);
 }
 
+/**
+  * This function resets (zeros) the accumulated (integrated) angle estimates for the xgyro, ygyro, and zgyro outputs.
+ **/
 void ADIS16448_IMU::Reset() {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   m_integ_gyro_x = 0.0;
@@ -235,628 +354,295 @@ void ADIS16448_IMU::Reset() {
   m_integ_gyro_z = 0.0;
 }
 
+void ADIS16448_IMU::Close() {
+  if (m_thread_active) {
+    m_thread_active = false;
+    if (m_acquire_task.joinable()) m_acquire_task.join();
+  }
+  if (m_spi != nullptr) {
+    if (m_auto_configured) {
+      m_spi->StopAuto();
+    }
+  delete m_spi;
+  m_auto_configured = false;
+    if (m_auto_interrupt != nullptr) {
+      delete m_auto_interrupt;
+      m_auto_interrupt = nullptr;
+    }
+    m_spi = nullptr;
+  }
+  delete[] m_offset_buffer;
+  std::cout << "Finished cleaning up after the IMU driver." << std::endl;
+}
+
 ADIS16448_IMU::~ADIS16448_IMU() {
-  m_spi.StopAuto();
-  m_freed = true;
-  m_samples_not_empty.notify_all();
-  if (m_acquire_task.joinable()) m_acquire_task.join();
-  if (m_calculate_task.joinable()) m_calculate_task.join();
+  Close();
 }
 
 void ADIS16448_IMU::Acquire() {
-  uint32_t buffer[2000];
-  double gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z, mag_x, mag_y, mag_z, baro, temp, dt, status;
+  // Set data packet length
+  const int dataset_len = 29; // 18 data points + timestamp
+
+  //struct to store accumulate data
+  offset_data sample_data;
+
+  // This buffer can contain many datasets
+  uint32_t buffer[4000];
   int data_count = 0;
   int data_remainder = 0;
   int data_to_read = 0;
-  uint16_t imu_crc = 0;
-  uint8_t data_subset[28];
-  uint32_t timestamp_new = 0;
+  int bufferAvgIndex = 0;
+  uint32_t previous_timestamp = 0;
+  double gyro_x = 0.0;
+  double gyro_y = 0.0;
+  double gyro_z = 0.0;
+  double accel_x = 0.0;
+  double accel_y = 0.0;
+  double accel_z = 0.0;
+  double mag_x = 0.0;
+  double mag_y = 0.0;
+  double mag_z = 0.0;
+  double baro = 0.0;
+  double temp = 0.0;
+  double gyro_x_si = 0.0;
+  double gyro_y_si = 0.0;
+  double gyro_z_si = 0.0;
+  double accel_x_si = 0.0;
+  double accel_y_si = 0.0;
+  double accel_z_si = 0.0;
+  double compAngleX = 0.0;
+  double compAngleY = 0.0;
+  double accelAngleX = 0.0;
+  double accelAngleY = 0.0;
 
-  while (!m_freed) {
+  while (true) {
 
-	  // Waiting for the buffer to fill...
-	  Wait(.020); // A delay greater than 50ms could potentially overflow the local buffer (depends on sensor sample rate)
+	  // Sleep loop for 10ms (wait for data)
+	  Wait(.01); 
 
-    std::fill_n(buffer, 2000, 0);  // Clear buffer
-	  data_count = m_spi.ReadAutoReceivedData(buffer,0,0_s); // Read number of bytes currently stored in the buffer
-	  data_remainder = data_count % 29; // Check if frame is incomplete
-    data_to_read = data_count - data_remainder;  // Remove incomplete data from read count
-	  m_spi.ReadAutoReceivedData(buffer,data_to_read,0_s); // Read data from DMA buffer
+    if (m_thread_active) {
 
-    // DEBUG: Print buffer size and contents to terminal
-    /*std::cout << "Start - " << data_count << "," << data_remainder << "," << data_to_read << "," << iq << std::endl;
-    for (int m = 0; m < data_to_read - 1; m++ )
-    {
-      std::cout << buffer[m] << ",";
-    }
-    std::cout << " " << std::endl;
-    std::cout << "End" << std::endl;*/
+      data_count = m_spi->ReadAutoReceivedData(buffer,0,0_s); // Read number of bytes currently stored in the buffer
+      data_remainder = data_count % dataset_len; // Check if frame is incomplete
+      data_to_read = data_count - data_remainder;  // Remove incomplete data from read count
+      m_spi->ReadAutoReceivedData(buffer, data_to_read, 0_s); // Read data from DMA buffer
 
-	  for (int i = 0; i < data_to_read; i += 29) { // Process each set of 28 ints + timestamp (29 total)
+      // Could be multiple data sets in the buffer. Handle each one.
+      for (int i = 0; i < data_to_read; i += dataset_len) { 
 
-		  for (int j = 1; j < 29; j++) {
-			  data_subset[j - 1] = buffer[i + j];  // Split each set of 28 bytes into a sub-array for processing
-      }
 
-		  // DEBUG: Plot sub-array data in terminal
- 		  /*std::cout << ToUShort(&data_subset[0]) << "," << ToUShort(&data_subset[2]) << "," << ToUShort(&data_subset[4]) <<
-		  "," << ToUShort(&data_subset[6]) << "," << ToUShort(&data_subset[8]) << "," << ToUShort(&data_subset[10]) << "," <<
-		  ToUShort(&data_subset[12]) << "," << ToUShort(&data_subset[14]) << "," << ToUShort(&data_subset[16]) << "," <<
-		  ToUShort(&data_subset[18]) << "," << ToUShort(&data_subset[20]) << "," << ToUShort(&data_subset[22]) << "," <<
-		  ToUShort(&data_subset[24]) << "," << ToUShort(&data_subset[26]) << std::endl; */
-
-      // Calculate CRC-16 on each data packet
-		  uint16_t calc_crc = 0xFFFF; // Starting word
-		  uint16_t byte = 0;
-		  for(int k = 4; k < 26; k += 2 ) // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
-		  {
-			  byte = data_subset[k+1]; // Process LSB
-			  calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
-			  byte = data_subset[k]; // Process MSB
-			  calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
-		  }
-		  calc_crc = ~calc_crc; // Complement
-		  calc_crc = (uint16_t)((calc_crc << 8) | (calc_crc >> 8)); // Flip LSB & MSB
-		  imu_crc = ToUShort(&data_subset[26]); // Extract DUT CRC from data buffer
-
-      // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
-      if (calc_crc == imu_crc) {
-
-        // Calculate delta-time (dt) using FPGA timestamps
-        timestamp_new = buffer[i];  // Extract timestamp from buffer
-        dt = (timestamp_new - timestamp_old)/1000000; // Calculate dt and convert us to seconds
-        timestamp_old = timestamp_new; // Store new timestamp in old variable for next cycle
-
-        gyro_x = ToShort(&data_subset[4]) * kDegreePerSecondPerLSB;
-        gyro_y = ToShort(&data_subset[6]) * kDegreePerSecondPerLSB;
-        gyro_z = ToShort(&data_subset[8]) * kDegreePerSecondPerLSB;
-        accel_x = ToShort(&data_subset[10]) * kGPerLSB;
-        accel_y = ToShort(&data_subset[12]) * kGPerLSB;
-        accel_z = ToShort(&data_subset[14]) * kGPerLSB;
-        mag_x = ToShort(&data_subset[16]) * kMilligaussPerLSB;
-        mag_y = ToShort(&data_subset[18]) * kMilligaussPerLSB;
-        mag_z = ToShort(&data_subset[20]) * kMilligaussPerLSB;
-        baro = ToUShort(&data_subset[22]) * kMillibarPerLSB;
-        temp = ToShort(&data_subset[24]) * kDegCPerLSB + kDegCOffset;
-        status = ToShort(&data_subset[2]);
-
+        // Calculate CRC-16 on each data packet
+        uint16_t calc_crc = 0xFFFF; // Starting word
+        uint8_t byte = 0;
+        uint16_t imu_crc = 0;
+        for(int k = 5; k < 27; k += 2 ) // Cycle through XYZ GYRO, XYZ ACCEL, XYZ MAG, BARO, TEMP (Ignore Status & CRC)
         {
-          std::lock_guard<wpi::mutex> sync(m_samples_mutex);
-          // If the FIFO is full, just drop it
-          if (m_calculate_started && m_samples_count < kSamplesDepth) {
-            Sample& sample = m_samples[m_samples_put_index];
-            sample.gyro_x = gyro_x;
-            sample.gyro_y = gyro_y;
-            sample.gyro_z = gyro_z;
-            sample.accel_x = accel_x;
-            sample.accel_y = accel_y;
-            sample.accel_z = accel_z;
-            sample.mag_x = mag_x;
-            sample.mag_y = mag_y;
-            sample.mag_z = mag_z;
-            sample.baro = baro;
-            sample.temp = temp;
-            sample.status = status;
-            sample.dt = dt;
-            ++m_samples_put_index;
-            if (m_samples_put_index == (kSamplesDepth + 2))
-              m_samples_put_index = 0;
-            ++m_samples_count;
-            m_samples_not_empty.notify_all();
+          byte = BuffToUByte(&buffer[i + k + 1]); // Process LSB
+          calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
+          byte = BuffToUByte(&buffer[i + k]); // Process MSB
+          calc_crc = (calc_crc >> 8) ^ adiscrc[(calc_crc & 0x00FF) ^ byte];
+        }
+        calc_crc = ~calc_crc; // Complement
+        calc_crc = (uint16_t)((calc_crc << 8) | (calc_crc >> 8)); // Flip LSB & MSB
+        imu_crc = BuffToUShort(&buffer[i + 27]); // Extract DUT CRC from data buffer
+
+        // Compare calculated vs read CRC. Don't update outputs or dt if CRC-16 is bad
+        if (calc_crc == imu_crc) {
+
+          // Timestamp is at buffer[i]
+          m_dt = (buffer[i] - previous_timestamp) / 1000000.0;
+          // Split array and scale data
+          gyro_x = BuffToShort(&buffer[i + 5]) * 0.04;
+          gyro_y = BuffToShort(&buffer[i + 7]) * 0.04;
+          gyro_z = BuffToShort(&buffer[i + 9]) * 0.04;
+          accel_x = BuffToShort(&buffer[i + 11]) * 0.833;
+          accel_y = BuffToShort(&buffer[i + 13]) * 0.833;
+          accel_z = BuffToShort(&buffer[i + 15]) * 0.833;
+          mag_x = BuffToShort(&buffer[i + 17]) * 0.1429;
+          mag_y = BuffToShort(&buffer[i + 19]) * 0.1429;
+          mag_z = BuffToShort(&buffer[i + 21]) * 0.1429;
+          baro = BuffToShort(&buffer[i + 23]) * 0.02;
+          temp = BuffToShort(&buffer[i + 25]) * 0.07386 + 31.0;
+
+          /*std::cout << BuffToShort(&buffer[i + 3]) << "," << BuffToShort(&buffer[i + 5]) << "," << BuffToShort(&buffer[i + 7]) <<
+          "," << BuffToShort(&buffer[i + 9]) << "," << BuffToShort(&buffer[i + 11]) << "," << BuffToShort(&buffer[i + 13]) << "," <<
+          BuffToShort(&buffer[i + 15]) << "," << BuffToShort(&buffer[i + 17]) << "," << BuffToShort(&buffer[i + 19]) << "," <<
+          BuffToShort(&buffer[i + 21]) << "," << BuffToShort(&buffer[i + 23]) << "," << BuffToShort(&buffer[i + 25]) << "," <<
+          BuffToShort(&buffer[i + 27]) << std::endl; */
+
+          // Convert scaled sensor data to SI units
+          gyro_x_si = gyro_x * deg_to_rad;
+          gyro_y_si = gyro_y * deg_to_rad;
+          gyro_z_si = gyro_z * deg_to_rad;
+          accel_x_si = accel_x * grav;
+          accel_y_si = accel_y * grav;
+          accel_z_si = accel_z * grav;
+          // Store timestamp for next iteration
+          previous_timestamp = buffer[i];
+          // Calculate alpha for use with the complementary filter
+          m_alpha = m_tau / (m_tau + m_dt);
+          // Calculate complementary filter
+          if (m_first_run) {
+            accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
+            compAngleX = accelAngleX;
+            compAngleY = accelAngleY;
           }
+          else {
+            accelAngleX = atan2f(-accel_x_si, sqrtf((accel_y_si * accel_y_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleY = atan2f(accel_y_si, sqrtf((-accel_x_si * -accel_x_si) + (-accel_z_si * -accel_z_si)));
+            accelAngleX = FormatAccelRange(accelAngleX, -accel_z_si);
+            accelAngleY = FormatAccelRange(accelAngleY, -accel_z_si);
+            compAngleX = CompFilterProcess(compAngleX, accelAngleX, -gyro_y_si);
+            compAngleY = CompFilterProcess(compAngleY, accelAngleY, -gyro_x_si);
+          }
+
+          // Update global variables and state
+          {
+            std::lock_guard<wpi::mutex> sync(m_mutex);
+            // Ignore first, integrated sample
+            if (m_first_run) {
+              m_integ_gyro_x = 0.0;
+              m_integ_gyro_y = 0.0;
+              m_integ_gyro_z = 0.0;
+            }
+            else {
+              // Accumulate gyro for offset calibration
+              // Build most recent sample data
+              sample_data.m_accum_gyro_x = gyro_x;
+              sample_data.m_accum_gyro_y = gyro_y;
+              sample_data.m_accum_gyro_z = gyro_z;
+              // Add to buffer
+              bufferAvgIndex = m_accum_count % m_avg_size;
+              m_offset_buffer[bufferAvgIndex] = sample_data;
+              // Increment counter
+              m_accum_count++;
+            }
+            // Don't post accumulated data to the global variables until an initial gyro offset has been calculated
+            if (!m_start_up_mode) {
+              m_gyro_x = gyro_x;
+              m_gyro_y = gyro_y;
+              m_gyro_z = gyro_z;
+              m_accel_x = accel_x;
+              m_accel_y = accel_y;
+              m_accel_z = accel_z;
+              m_mag_x = mag_x;
+              m_mag_y = mag_y;
+              m_mag_z = mag_z;
+              m_baro = baro;
+              m_temp = temp;
+              m_compAngleX = compAngleX * rad_to_deg;
+              m_compAngleY = compAngleY * rad_to_deg;
+              m_accelAngleX = accelAngleX * rad_to_deg;
+              m_accelAngleY = accelAngleY * rad_to_deg;
+              // Accumulate gyro for angle integration and publish to global variables
+              m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * m_dt;
+              m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * m_dt;
+              m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * m_dt;
+            }
+          }
+          m_first_run = false;
         }
-
-        // Update global state
-        {
-          std::lock_guard<wpi::mutex> sync(m_mutex);
-          m_gyro_x = gyro_x;
-          m_gyro_y = gyro_y;
-          m_gyro_z = gyro_z;
-          m_accel_x = accel_x;
-          m_accel_y = accel_y;
-          m_accel_z = accel_z;
-          m_mag_x = mag_x;
-          m_mag_y = mag_y;
-          m_mag_z = mag_z;
-          m_baro = baro;
-          m_temp = temp;
-          m_dt = dt;
-          m_status = status;
-
-          // Accumulate gyro for offset calibration
-          ++m_accum_count;
-          m_accum_gyro_x += gyro_x;
-          m_accum_gyro_y += gyro_y;
-          m_accum_gyro_z += gyro_z;
-
-          // Accumulate gyro for angle integration
-          m_integ_gyro_x += (gyro_x - m_gyro_offset_x) * dt;
-          m_integ_gyro_y += (gyro_y - m_gyro_offset_y) * dt;
-          m_integ_gyro_z += (gyro_z - m_gyro_offset_z) * dt;
+        else {
+          /*
+          // Print notification when crc fails and bad data is rejected
+          std::cout << "IMU Data CRC Mismatch Detected." << std::endl;
+          std::cout << "Calculated CRC: " << calc_crc << std::endl;
+          std::cout << "Read CRC: " << imu_crc << std::endl;
+          // DEBUG: Plot sub-array data in terminal
+          std::cout << BuffToUShort(&buffer[i + 3]) << "," << BuffToUShort(&buffer[i + 5]) << "," << BuffToUShort(&buffer[i + 7]) <<
+          "," << BuffToUShort(&buffer[i + 9]) << "," << BuffToUShort(&buffer[i + 11]) << "," << BuffToUShort(&buffer[i + 13]) << "," <<
+          BuffToUShort(&buffer[i + 15]) << "," << BuffToUShort(&buffer[i + 17]) << "," << BuffToUShort(&buffer[i + 19]) << "," <<
+          BuffToUShort(&buffer[i + 21]) << "," << BuffToUShort(&buffer[i + 23]) << "," << BuffToUShort(&buffer[i + 25]) << "," <<
+          BuffToUShort(&buffer[i + 27]) << std::endl; */
         }
       }
-      else {
-        // Print notification when crc fails and bad data is rejected
-        std::cout << "IMU Data CRC Mismatch - " << calc_crc << "," << imu_crc << " - Data Ignored and Integration Time Adjusted" << std::endl;
-      }
-	  }
-  }
-}
-
-void ADIS16448_IMU::Calculate() {
-  while (!m_freed) {
-    // Wait for next sample and get it
-    Sample* sample;
-    {
-      std::unique_lock<wpi::mutex> sync(m_samples_mutex);
-      m_calculate_started = true;
-      m_samples_not_empty.wait(sync,
-                               [=] { return m_samples_count != 0 || m_freed; });
-      if (m_freed) return;
-      sample = &m_samples[m_samples_take_index];
-      ++m_samples_take_index;
-      if (m_samples_take_index == (kSamplesDepth + 2))
-        m_samples_take_index = 0;
-      --m_samples_count;
     }
-
-    switch (m_algorithm) {
-      case kMadgwick:
-        CalculateMadgwick(*sample, 0.4);
-        break;
-      case kComplementary:
-      default:
-        CalculateComplementary(*sample);
-        break;
+    else {
+      m_thread_idle = true;
+      data_count = 0;
+      data_remainder = 0;
+      data_to_read = 0;
+      previous_timestamp = 0.0;
+      gyro_x = 0.0;
+      gyro_y = 0.0;
+      gyro_z = 0.0;
+      accel_x = 0.0;
+      accel_y = 0.0;
+      accel_z = 0.0;
+      mag_x = 0.0;
+      mag_y = 0.0;
+      mag_z = 0.0;
+      baro = 0.0;
+      temp = 0.0;
+      gyro_x_si = 0.0;
+      gyro_y_si = 0.0;
+      gyro_z_si = 0.0;
+      accel_x_si = 0.0;
+      accel_y_si = 0.0;
+      accel_z_si = 0.0;
+      compAngleX = 0.0;
+      compAngleY = 0.0;
+      accelAngleX = 0.0;
+      accelAngleY = 0.0;
     }
   }
 }
 
-void ADIS16448_IMU::CalculateMadgwick(Sample& sample, double beta) {
-  // Make local copy of quaternion and angle global state
-  double q1, q2, q3, q4;
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    q1 = m_ahrs_q1;
-    q2 = m_ahrs_q2;
-    q3 = m_ahrs_q3;
-    q4 = m_ahrs_q4;
+/* Complementary filter functions */
+double ADIS16448_IMU::FormatFastConverge(double compAngle, double accAngle) {
+  if(compAngle > accAngle + M_PI) {
+    compAngle = compAngle - 2.0 * M_PI;
   }
-
-  // Swap axis as appropriate for yaw axis selection
-  sample.AdjustYawAxis(m_yaw_axis);
-
-  // Kalman calculation
-  // Code originated from: https://decibel.ni.com/content/docs/DOC-18964
-  do {
-    // If true, only use gyros and magnetos for updating the filter.
-    bool excludeAccel = false;
-
-    // Convert accelerometer units to m/sec/sec
-    double ax = sample.accel_x * kAccelScale;
-    double ay = sample.accel_y * kAccelScale;
-    double az = sample.accel_z * kAccelScale;
-    // Normalize accelerometer measurement
-    double norm = std::sqrt(ax * ax + ay * ay + az * az);
-    if (norm > 0.3 && !excludeAccel) {
-      // normal larger than the sensor noise floor during freefall
-      norm = 1.0 / norm;
-      ax *= norm;
-      ay *= norm;
-      az *= norm;
-    } else {
-      ax = 0;
-      ay = 0;
-      az = 0;
-    }
-
-    // Convert magnetometer units to uTesla
-    double mx = sample.mag_x * kMagScale;
-    double my = sample.mag_y * kMagScale;
-    double mz = sample.mag_z * kMagScale;
-    // Normalize magnetometer measurement
-    norm = std::sqrt(mx * mx + my * my + mz * mz);
-    if (norm > 0.0) {
-      norm = 1.0 / norm;
-      mx *= norm;
-      my *= norm;
-      mz *= norm;
-    } else {
-      break; // something is wrong with the magneto readouts
-    }
-
-    double _2q1 = 2.0 * q1;
-    double _2q2 = 2.0 * q2;
-    double _2q3 = 2.0 * q3;
-    double _2q4 = 2.0 * q4;
-    double _2q1q3 = 2.0 * q1 * q3;
-    double _2q3q4 = 2.0 * q3 * q4;
-    double q1q1 = q1 * q1;
-    double q1q2 = q1 * q2;
-    double q1q3 = q1 * q3;
-    double q1q4 = q1 * q4;
-    double q2q2 = q2 * q2;
-    double q2q3 = q2 * q3;
-    double q2q4 = q2 * q4;
-    double q3q3 = q3 * q3;
-    double q3q4 = q3 * q4;
-    double q4q4 = q4 * q4;
-
-    // Reference direction of Earth's magnetic field
-    double _2q1mx = 2 * q1 * mx;
-    double _2q1my = 2 * q1 * my;
-    double _2q1mz = 2 * q1 * mz;
-    double _2q2mx = 2 * q2 * mx;
-
-    double hx = mx * q1q1 - _2q1my * q4 + _2q1mz * q3 + mx * q2q2 + _2q2 * my * q3 + _2q2 * mz * q4 - mx * q3q3 - mx * q4q4;
-    double hy = _2q1mx * q4 + my * q1q1 - _2q1mz * q2 + _2q2mx * q3 - my * q2q2 + my * q3q3 + _2q3 * mz * q4 - my * q4q4;
-    double _2bx = std::sqrt(hx * hx + hy * hy);
-    double _2bz = -_2q1mx * q3 + _2q1my * q2 + mz * q1q1 + _2q2mx * q4 - mz * q2q2 + _2q3 * my * q4 - mz * q3q3 + mz * q4q4;
-    double _4bx = 2.0 * _2bx;
-    double _4bz = 2.0 * _2bz;
-    double _8bx = 2.0 * _4bx;
-    double _8bz = 2.0 * _4bz;
-
-    // Gradient descent algorithm corrective step
-    double s1 =
-      - _2q3 * (2.0 * q2q4 - _2q1q3 - ax)
-      + _2q2 * (2.0 * q1q2 + _2q3q4 - ay)
-      - _4bz * q3 * (_4bx * (0.5 - q3q3 - q4q4) + _4bz * (q2q4 - q1q3) - mx)
-      + (-_4bx * q4 + _4bz * q2) * (_4bx * (q2q3 - q1q4) + _4bz * (q1q2 + q3q4) - my)
-      + _4bx * q3 * (_4bx * (q1q3 + q2q4) + _4bz * (0.5 - q2q2 - q3q3) - mz);
-    double s2 =
-        _2q4 * (2.0 * q2q4 - _2q1q3 - ax)
-      + _2q1 * (2.0 * q1q2 + _2q3q4 - ay)
-      - 4.0 * q2 * (1.0 - 2.0 * q2q2 - 2.0 * q3q3 - az)
-      + _4bz * q4 * (_4bx * (0.5 - q3q3 - q4q4) + _4bz * (q2q4 - q1q3) - mx)
-      + (_4bx * q3 + _4bz * q1) * (_4bx * (q2q3 - q1q4) + _4bz * (q1q2 + q3q4) - my)
-      + (_4bx * q4 - _8bz * q2) * (_4bx * (q1q3 + q2q4) + _4bz * (0.5 - q2q2 - q3q3) - mz);
-    double s3 =
-      - _2q1 * (2.0 * q2q4 - _2q1q3 - ax)
-      + _2q4 * (2.0 * q1q2 + _2q3q4 - ay)
-      - 4.0 * q3 * (1.0 - 2.0 * q2q2 - 2.0 * q3q3 - az)
-      + (-_8bx * q3 - _4bz * q1) * (_4bx * (0.5 - q3q3 - q4q4) + _4bz * (q2q4 - q1q3) - mx)
-      + (_4bx * q2 + _4bz * q4) * (_4bx * (q2q3 - q1q4) + _4bz * (q1q2 + q3q4) - my)
-      + (_4bx * q1 - _8bz * q3) * (_4bx * (q1q3 + q2q4) + _4bz * (0.5 - q2q2 - q3q3) - mz);
-    double s4 =
-        _2q2 * (2.0 * q2q4 - _2q1q3 - ax)
-      + _2q3 * (2.0 * q1q2 + _2q3q4 - ay)
-      + (-_8bx * q4 + _4bz * q2) * (_4bx * (0.5 - q3q3 - q4q4) + _4bz * (q2q4 - q1q3) - mx)
-      + (-_4bx * q1 + _4bz * q3) * (_4bx * (q2q3 - q1q4) + _4bz * (q1q2 + q3q4) - my)
-      + _4bx * q2 * (_4bx * (q1q3 + q2q4) + _4bz * (0.5 - q2q2 - q3q3) - mz);
-
-    norm = std::sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4);
-    if (norm > 0.0) {
-      norm = 1.0 / norm;  //normalise gradient step
-      s1 *= norm;
-      s2 *= norm;
-      s3 *= norm;
-      s4 *= norm;
-    } else {
-      break;
-    }
-
-    // Convert gyro units to rad/sec
-    double gx = sample.gyro_x * kGyroScale;
-    double gy = sample.gyro_y * kGyroScale;
-    double gz = sample.gyro_z * kGyroScale;
-
-    // Compute rate of change of quaternion
-    double qDot1 = 0.5 * (-q2 * gx - q3 * gy - q4 * gz) - kBeta * s1;
-    double qDot2 = 0.5 * ( q1 * gx + q3 * gz - q4 * gy) - kBeta * s2;
-    double qDot3 = 0.5 * ( q1 * gy - q2 * gz + q4 * gx) - kBeta * s3;
-    double qDot4 = 0.5 * ( q1 * gz + q2 * gy - q3 * gx) - kBeta * s4;
-
-    // Integrate to yield quaternion
-    q1 += qDot1 * sample.dt;
-    q2 += qDot2 * sample.dt;
-    q3 += qDot3 * sample.dt;
-    q4 += qDot4 * sample.dt;
-
-    norm = std::sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);
-    if (norm > 0.0) {
-      norm = 1.0 / norm;  // normalise quaternion
-      q1 = q1 * norm;
-      q2 = q2 * norm;
-      q3 = q3 * norm;
-      q4 = q4 * norm;
-    }
-  } while (false);
-
-  // Convert quaternion to angles of rotation
-  double xi = -std::atan2(2*q2*q3 - 2*q1*q4, 2*(q1*q1) + 2*(q2*q2) - 1);
-  double theta = -std::asin(2*q2*q4 + 2*q1*q3);
-  double rho = std::atan2(2*q3*q4 - 2*q1*q2, 2*(q1*q1) + 2*(q4*q4) - 1);
-
-  // Convert angles from radians to degrees
-  xi = xi / M_PI * 180.0;
-  theta = theta / M_PI * 180.0;
-  rho = rho / M_PI * 180.0;
-
-  // Adjust angles for inverted mount of MXP sensor
-  theta = -theta;
-  if (rho < 0)
-    rho = 180 - std::abs(rho);
-  else
-    rho = std::abs(rho) - 180;
-
-  // Update global state
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_ahrs_q1 = q1;
-    m_ahrs_q2 = q2;
-    m_ahrs_q3 = q3;
-    m_ahrs_q4 = q4;
-    m_yaw = xi;
-    m_roll = theta;
-    m_pitch = rho;
+  else if (accAngle > compAngle + M_PI) {
+    compAngle = compAngle + 2.0 * M_PI;
   }
+  return compAngle;  
 }
 
-// Thank you to the RoboBees for providing this elegant AHRS implementation
-// to the FIRST community!
-void ADIS16448_IMU::CalculateComplementary(Sample& sample) {
-  // Description:
-  // Accepts calibrated Rate Gyro, Accelerometer, and Magnetometer sensor
-  // readings and applies a Complementary Filter to fuse them into a single
-  // composite sensor which provides accurate and stable rotation indications
-  // (Pitch, Roll, and Yaw).  This sensor fusion approach effectively
-  // combines the individual sensor's best respective properties while
-  // mitigating their shortfalls.
-  //
-  // Design:
-  // The Complementary Filter is an algorithm that allows a pair of sensors
-  // to contribute differently to a common, composite measurement result.
-  // It effectively applies a low pass filter to one sensor, and a high pass
-  // filter to the other, then proportionally recombines them in such a way
-  // to maintain the original unit of measurement.  It is computationally
-  // inexpensive when compared to alternative estimation techniques such as
-  // the Kalman filter.  The algorithm is given by:
-  //
-  // angle(n) = (alpha)*(angle(n-1) + gyrorate * dt) + (1-alpha)*(accel or mag);
-  //
-  // where :
-  //
-  // alpha = tau / (tau + dt)
-  //
-  // This implementation uses the average Gyro rate across the dt period, so
-  // above gyrorate = [(gyrorate(n)-gyrorate(n-1)]/2
-  //
-  // Essentially, for Pitch and Roll, the slow moving (lower frequency) part
-  // of the rotation estimate is taken from the Accelerometer - ignoring the
-  // high noise level, and the faster moving (higher frequency) part is taken
-  // from the Rate Gyro - ignoring the slow Gyro drift.  Same for Yaw, except
-  // that the Magnetometer replaces the Accelerometer to source the slower
-  // moving component.  This is because Pitch and Roll can be referenced to
-  // the Accelerometer's sense of the Earth's gravity vector.  Yaw cannot be
-  // referenced to this vector since this rotation does not cause any
-  // relative angular change, but it can be referenced to magnetic North.
-  // The parameter 'tau' is the time constant that defines the boundary
-  // between the low and high pass filters.  Both tau and the sample time,
-  // dt, affect the parameter 'alpha', which sets the balance point for how
-  // much of which sensor is 'trusted' to contribute to the rotation estimate.
-  //
-  // The Complementary Filter algorithm is applied to each X/Y/Z rotation
-  // axis to compute R/P/Y outputs, respectively.
-  //
-  // Magnetometer readings are tilt-compensated when Tilt-Comp-(Yaw) is
-  // asserted (True), by the IMU TILT subVI.  This creates what is known as a
-  // tilt-compensated compass, which allows Yaw to be insensitive to the
-  // effects of a non-level sensor, but generates error in Yaw during
-  // movement (coordinate acceleration).
-  //
-  // The Yaw "South" crossing detector is necessary to allow a smooth
-  // transition across the +/- 180 deg discontinuity (inherent in the ATAN
-  // function).  Since -180 deg is congruent with +180 deg, Yaw needs to jump
-  // between these values when crossing South (North is 0 deg).  The design
-  // depends upon comparison of successive Yaw readings to detect a
-  // cross-over event.  The cross-over detector monitors the current reading
-  // and evaluates how far it is from the previous reading.  If it is greater
-  // than the previous reading by the Discriminant (= 180 deg), then Yaw just
-  // crossed South.
-  //
-  // By choosing 180 as the Discriminant, the only way the detector can
-  // produce a false positive, assuming a loop iteration of 70 msec, is for
-  // it to rotate >2,571 dps ... (2,571=180/.07).  This is faster than the ST
-  // L3GD20 Gyro can register.  The detector produces a Boolean True upon
-  // detecting a South crossing.  This is used to alter the (n-1) Yaw which
-  // was previously stored, either adding or subtracting 360 degrees as
-  // required to place the previous Yaw in the correct quadrant whenever
-  // crossing occurs.  The Modulus function cannot be used here as the
-  // Complementary Filter algorithm has 'state' (needs to remember previous
-  // Yaw).
-  //
-  // We are in effect stitching together two ends of a ruler for 'modular
-  // arithmetic' (clock math).
-  //
-  // Inputs:
-  // GYRO - Gyro rate and sample time measurements.
-  // ACCEL - Acceleration measurements.
-  // MAG - Magnetic measurements.
-  // TAU ACC - tau parameter used to set sensor balance between Accel and
-  //           Gyro for Roll and Pitch.
-  // TAU MAG - tau parameter used to set sensor balance between Mag and Gyro
-  //           for Yaw.
-  // TILT COMP (Yaw) - Enables Yaw tilt-compensation if True.
-  //
-  // Outputs:
-  // ROLL - Filtered Roll about sensor X-axis.
-  // PITCH - Filtered Pitch about sensor Y-axis.
-  // YAW - Filtered Yaw about sensor Z-axis.
-  //
-  // Implementation:
-  // It's best to establish the optimum loop sample time first.  See IMU READ
-  // implementation notes for guidance.  Each tau parameter should then be
-  // adjusted to achieve optimum sensor fusion.  tau acc affects Roll and
-  // Pitch, tau mag affects Yaw.  Start at value 1 or 2 and decrease by half
-  // each time until the result doesn't drift, but not so far that the result
-  // gets noisy.  An optimum tau for this IMU is likely in the range of 1.0
-  // to 0.01, for a loop sample time between 10 and 100 ms.
-  //
-  // Note that both sample timing (dt) and tau both affect the balance
-  // parameter, 'alpha'.  Adjusting either dt or tau will require the other
-  // to be readjusted to maintain a particular filter performance.
-  //
-  // It is likely best to set Yaw tilt-compensation to off (False) if the Yaw
-  // value is to be used as feedback in a closed loop control application.
-  // The tradeoff is that Yaw will only be accurate while the robot is level.
-  //
-  // Since a Yaw of -180 degrees is congruent with +180 degrees (they
-  // represent the same direction), it is possible that the Yaw output will
-  // oscillate between these two values when the sensor happens to be
-  // pointing due South, as sensor noise causes slight variation.  You will
-  // need to account for this possibility if you are using the Yaw value for
-  // decision-making in code.
-  //
-  // ----- The RoboBees FRC Team 836! -----
-  // Complement your passion to solve problems with a STEM Education!
-
-  // Compensate for PCB-Up Mounting Config.
-  sample.gyro_y = -sample.gyro_y;
-  sample.gyro_z = -sample.gyro_z;
-  sample.accel_y = -sample.accel_y;
-  sample.accel_z = -sample.accel_z;
-  sample.mag_y = -sample.mag_y;
-  sample.mag_z = -sample.mag_z;
-
-  // Swap axis as appropriate for yaw axis selection
-  sample.AdjustYawAxis(m_yaw_axis);
-
-  static constexpr double tau_acc = 0.95;
-  static constexpr double tau_mag = 0.04;
-
-  double roll, pitch, yaw;
-  bool tilt_comp_yaw;
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    roll = m_roll;
-    pitch = m_pitch;
-    yaw = m_yaw;
-    tilt_comp_yaw = m_tilt_comp_yaw;
+double ADIS16448_IMU::FormatRange0to2PI(double compAngle) {
+  while(compAngle >= 2 * M_PI) {
+    compAngle = compAngle - 2.0 * M_PI;
   }
-
-  // Calculate mag angle in degrees
-  double mag_angle = std::atan2(sample.mag_y, sample.mag_x) / M_PI * 180.0;
-
-  // Tilt compensation:
-  // see http://www.freescale.com/files/sensors/doc/app_note/AN3461.pdf
-  // for derivation of Pitch and Roll equations.  Used eqs 37 & 38 as Rxyz.
-  // Eqs 42 & 43, as Ryxz, produce same values within Pitch & Roll
-  // constraints.
-  //
-  // Freescale's Pitch/Roll derivation is preferred over ST's as it does not
-  // degrade due to the Sine function linearity assumption.
-  //
-  // Pitch is accurate over +/- 90 degree range, and Roll is accurate within
-  // +/- 180 degree range - as long as accelerometer is only sensing
-  // acceleration due to gravity.  Movement (coordinate acceleration) will
-  // add error to Pitch and Roll indications.
-  //
-  // Yaw is not obtainable from an accelerometer due to its geometric
-  // relationship with the Earth's gravity vector.  (Would have same problem
-  // on Mars.)
-  //
-  // see http://www.pololu.com/file/0J434/LSM303DLH-compass-app-note.pdf
-  // for derivation of Yaw equation.  Used eq 12 in Appendix A (eq 13 is
-  // replaced by ATAN2 function).  Yaw is obtainable from the magnetometer,
-  // but is sensitive to any tilt from horizontal.  This uses Pitch and Roll
-  // values from above for tilt compensation of Yaw, resulting in a
-  // tilt-compensated compass.
-  //
-  // As with Pitch/Roll, movement (coordinate acceleration) will add error to
-  // Yaw indication.
-
-  // Accel
-  double tilt_pitch_rad = std::atan2(-sample.accel_x, std::sqrt(sample.accel_y * sample.accel_y + sample.accel_z * sample.accel_z));
-  double tilt_pitch = tilt_pitch_rad / M_PI * 180.0;
-
-  int accel_z_signum;
-  if (sample.accel_z < 0)
-    accel_z_signum = -1;
-  else if (sample.accel_z > 0)
-    accel_z_signum = 1;
-  else
-    accel_z_signum = 0;
-  double tilt_roll_rad = std::atan2(sample.accel_y, std::sqrt(sample.accel_x * sample.accel_x * 0.01 + sample.accel_z * sample.accel_z) * accel_z_signum);
-  double tilt_roll = tilt_roll_rad / M_PI * 180.0;
-
-  // Mag
-  double tilt_yaw;
-  if (tilt_comp_yaw) {
-    double sin_pitch = std::sin(tilt_pitch_rad);
-    double cos_pitch = std::cos(tilt_pitch_rad);
-    double sin_roll = std::sin(tilt_roll_rad);
-    double cos_roll = std::cos(tilt_roll_rad);
-    double mx2 = sample.mag_x * cos_pitch + sample.mag_z * sin_pitch;
-    double my2 = sample.mag_x * sin_roll * sin_pitch + sample.mag_y * cos_roll - sample.mag_z * sin_roll * cos_pitch;
-    //double mz2 = -sample.mag_x * cos_roll * sin_pitch + sample.mag_y * sin_roll + sample.mag_z * cos_roll * cos_pitch;
-    tilt_yaw = std::atan2(my2, mx2) / M_PI * 180.0;
-  } else {
-    tilt_yaw = mag_angle;
+  while(compAngle < 0.0) {
+    compAngle = compAngle + 2.0 * M_PI;
   }
-
-  // Positive rotation of Magnetometer is clockwise when looking in + Z
-  // direction.  This is subtracted from 0 deg to reverse rotation
-  // direction, as it needs to be aligned with the definition of positive
-  // Gyroscope rotation, (which is CCW looking in + Z direction), to enable
-  // sensor fusion.
-  //
-  // 0 degrees is due magnetic North.
-  tilt_yaw = -tilt_yaw;
-
-  // "South" crossing Detector
-  if (std::abs(mag_angle - m_mag_angle_prev) >= 180) {
-    if (m_mag_angle_prev < 0) {
-      yaw += -360;
-    } else if (m_mag_angle_prev > 0) {
-      yaw += 360;
-    }
-  }
-  m_mag_angle_prev = mag_angle;
-
-  // alpha = tau / (tau + dt)
-  double alpha_acc = tau_acc / (tau_acc + sample.dt);
-  double alpha_mag = tau_mag / (tau_mag + sample.dt);
-
-  // gyrorate = [(gyrorate(n)-gyrorate(n-1)]/2
-  // angle(n) = (alpha)*(angle(n-1) + gyrorate * dt) + (1-alpha)*(accel or mag);
-  if (m_first) {
-    m_gyro_x_prev = sample.gyro_x;
-    m_gyro_y_prev = sample.gyro_y;
-    m_gyro_z_prev = sample.gyro_z;
-    m_first = false;
-  }
-  roll =
-      alpha_acc * (roll + sample.dt * (sample.gyro_x + m_gyro_x_prev) / 2.0) +
-      (1 - alpha_acc) * tilt_roll;
-  pitch =
-      alpha_acc * (pitch + sample.dt * (sample.gyro_y + m_gyro_y_prev) / 2.0) +
-      (1 - alpha_acc) * tilt_pitch;
-  yaw =
-      alpha_mag * (yaw + sample.dt * (sample.gyro_z + m_gyro_z_prev) / 2.0) +
-      (1 - alpha_mag) * tilt_yaw;
-  m_gyro_x_prev = sample.gyro_x;
-  m_gyro_y_prev = sample.gyro_y;
-  m_gyro_z_prev = sample.gyro_z;
-
-  // Update global state
-  {
-    std::lock_guard<wpi::mutex> sync(m_mutex);
-    m_roll = roll;
-    m_pitch = pitch;
-    m_yaw = yaw;
-  }
+  return compAngle;
 }
 
+double ADIS16448_IMU::FormatAccelRange(double accelAngle, double accelZ) {
+  if(accelZ < 0.0) {
+    accelAngle = M_PI - accelAngle;
+  }
+  else if(accelZ > 0.0 && accelAngle < 0.0) {
+    accelAngle = 2.0 * M_PI + accelAngle;
+  }
+  return accelAngle;
+}
+
+double ADIS16448_IMU::CompFilterProcess(double compAngle, double accelAngle, double omega) {
+  compAngle = FormatFastConverge(compAngle, accelAngle);
+  compAngle = m_alpha * (compAngle + omega * m_dt) + (1.0 - m_alpha) * accelAngle;
+  compAngle = FormatRange0to2PI(compAngle);
+  if(compAngle > M_PI) {
+    compAngle = compAngle - 2.0 * M_PI;
+  }
+  return compAngle;
+}
+
+/**
+  * This function returns the most recent integrated angle for the axis chosen by m_yaw_axis. 
+  * This function is most useful in situations where the yaw axis may not coincide with the IMU
+  * Z axis. 
+ **/
 double ADIS16448_IMU::GetAngle() const {
   switch (m_yaw_axis) {
     case kX:
-      return GetAngleX();
+      return GetGyroAngleX();
     case kY:
-      return GetAngleY();
+      return GetGyroAngleY();
     case kZ:
-      return GetAngleZ();
+      return GetGyroAngleZ();
     default:
       return 0.0;
   }
@@ -865,99 +651,98 @@ double ADIS16448_IMU::GetAngle() const {
 double ADIS16448_IMU::GetRate() const {
   switch (m_yaw_axis) {
     case kX:
-      return GetRateX();
+      return GetGyroInstantX();
     case kY:
-      return GetRateY();
+      return GetGyroInstantY();
     case kZ:
-      return GetRateZ();
+      return GetGyroInstantZ();
     default:
       return 0.0;
   }
 }
 
-double ADIS16448_IMU::GetAngleX() const {
+ADIS16448_IMU::IMUAxis ADIS16448_IMU::GetYawAxis() const {
+  return m_yaw_axis;
+}
+
+double ADIS16448_IMU::GetGyroAngleX() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_integ_gyro_x;
 }
 
-double ADIS16448_IMU::GetAngleY() const {
+double ADIS16448_IMU::GetGyroAngleY() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_integ_gyro_y;
 }
 
-double ADIS16448_IMU::GetAngleZ() const {
+double ADIS16448_IMU::GetGyroAngleZ() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_integ_gyro_z;
 }
 
-double ADIS16448_IMU::GetRateX() const {
+double ADIS16448_IMU::GetGyroInstantX() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_gyro_x;
 }
 
-double ADIS16448_IMU::GetRateY() const {
+double ADIS16448_IMU::GetGyroInstantY() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_gyro_y;
 }
 
-double ADIS16448_IMU::GetRateZ() const {
+double ADIS16448_IMU::GetGyroInstantZ() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_gyro_z;
 }
 
-double ADIS16448_IMU::GetAccelX() const {
+double ADIS16448_IMU::GetAccelInstantX() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_accel_x;
 }
 
-double ADIS16448_IMU::GetAccelY() const {
+double ADIS16448_IMU::GetAccelInstantY() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_accel_y;
 }
 
-double ADIS16448_IMU::GetAccelZ() const {
+double ADIS16448_IMU::GetAccelInstantZ() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_accel_z;
 }
 
-double ADIS16448_IMU::GetMagX() const {
+double ADIS16448_IMU::GetMagInstantX() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_mag_x;
 }
 
-double ADIS16448_IMU::GetMagY() const {
+double ADIS16448_IMU::GetMagInstantY() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_mag_y;
 }
 
-double ADIS16448_IMU::GetMagZ() const {
+double ADIS16448_IMU::GetMagInstantZ() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
   return m_mag_z;
 }
 
-double ADIS16448_IMU::GetPitch() const {
+double ADIS16448_IMU::GetXComplementaryAngle() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_pitch;
+  return m_compAngleX;
 }
 
-double ADIS16448_IMU::GetRoll() const {
+double ADIS16448_IMU::GetYComplementaryAngle() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_roll;
+  return m_compAngleY;
 }
 
-double ADIS16448_IMU::GetYaw() const {
+double ADIS16448_IMU::GetXFilteredAccelAngle() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_yaw;
+  return m_accelAngleX;
 }
 
-double ADIS16448_IMU::Getdt() const {
+double ADIS16448_IMU::GetYFilteredAccelAngle() const {
   std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_dt;
-}
-
-double ADIS16448_IMU::GetStatus() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_status;
+  return m_accelAngleY;
 }
 
 double ADIS16448_IMU::GetBarometricPressure() const {
@@ -970,37 +755,8 @@ double ADIS16448_IMU::GetTemperature() const {
   return m_temp;
 }
 
-double ADIS16448_IMU::GetQuaternionW() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_ahrs_q1;
-}
-
-double ADIS16448_IMU::GetQuaternionX() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_ahrs_q2;
-}
-
-double ADIS16448_IMU::GetQuaternionY() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_ahrs_q3;
-}
-
-double ADIS16448_IMU::GetQuaternionZ() const {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  return m_ahrs_q4;
-}
-
-void ADIS16448_IMU::SetTiltCompYaw(bool enabled) {
-  std::lock_guard<wpi::mutex> sync(m_mutex);
-  m_tilt_comp_yaw = enabled;
-}
-
 void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
   builder.SetSmartDashboardType("ADIS16448 IMU");
-  auto value = builder.GetEntry("Value").GetHandle();
-  auto pitch = builder.GetEntry("Pitch").GetHandle();
-  auto roll = builder.GetEntry("Roll").GetHandle();
-  auto yaw = builder.GetEntry("Yaw").GetHandle();
   auto gyroX = builder.GetEntry("GyroX").GetHandle();
   auto gyroY = builder.GetEntry("GyroY").GetHandle();
   auto gyroZ = builder.GetEntry("GyroZ").GetHandle();
@@ -1010,23 +766,15 @@ void ADIS16448_IMU::InitSendable(SendableBuilder& builder) {
   auto angleX = builder.GetEntry("AngleX").GetHandle();
   auto angleY = builder.GetEntry("AngleY").GetHandle();
   auto angleZ = builder.GetEntry("AngleZ").GetHandle();
-  auto dt = builder.GetEntry("dt").GetHandle();
-  auto status = builder.GetEntry("Status").GetHandle();
   builder.SetUpdateTable([=]() {
-	nt::NetworkTableEntry(value).SetDouble(GetAngle());
-	nt::NetworkTableEntry(pitch).SetDouble(GetPitch());
-	nt::NetworkTableEntry(roll).SetDouble(GetRoll());
-	nt::NetworkTableEntry(yaw).SetDouble(GetYaw());
-	nt::NetworkTableEntry(gyroX).SetDouble(GetRateX());
-	nt::NetworkTableEntry(gyroY).SetDouble(GetRateY());
-	nt::NetworkTableEntry(gyroZ).SetDouble(GetRateZ());
-	nt::NetworkTableEntry(accelX).SetDouble(GetAccelX());
-	nt::NetworkTableEntry(accelY).SetDouble(GetAccelY());
-	nt::NetworkTableEntry(accelZ).SetDouble(GetAccelZ());
-	nt::NetworkTableEntry(angleX).SetDouble(GetAngleX());
-	nt::NetworkTableEntry(angleY).SetDouble(GetAngleY());
-	nt::NetworkTableEntry(angleZ).SetDouble(GetAngleZ());
-  nt::NetworkTableEntry(dt).SetDouble(Getdt());
-  nt::NetworkTableEntry(status).SetDouble(GetStatus());
+	nt::NetworkTableEntry(gyroX).SetDouble(GetGyroInstantX());
+	nt::NetworkTableEntry(gyroY).SetDouble(GetGyroInstantY());
+	nt::NetworkTableEntry(gyroZ).SetDouble(GetGyroInstantZ());
+	nt::NetworkTableEntry(accelX).SetDouble(GetAccelInstantX());
+	nt::NetworkTableEntry(accelY).SetDouble(GetAccelInstantY());
+	nt::NetworkTableEntry(accelZ).SetDouble(GetAccelInstantZ());
+	nt::NetworkTableEntry(angleX).SetDouble(GetGyroAngleX());
+	nt::NetworkTableEntry(angleY).SetDouble(GetGyroAngleY());
+	nt::NetworkTableEntry(angleZ).SetDouble(GetGyroAngleZ());
   });
 }
