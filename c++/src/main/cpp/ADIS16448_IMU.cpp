@@ -78,7 +78,7 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time
 
   // Set IMU internal decimation to 819.2 SPS
   WriteRegister(SMPL_PRD, 0x0001);
-  // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP), PoP, and G sensitivity compensation
+  // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP)
   WriteRegister(MSC_CTRL, 0x0016);
   // Configure IMU internal Bartlett filter
   WriteRegister(SENS_AVG, 0x0402);

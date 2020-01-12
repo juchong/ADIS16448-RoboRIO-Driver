@@ -25,7 +25,7 @@
 
 namespace frc {
 
-/* ADIS16448 Register Map Declaration */
+/** @brief ADIS16448 Register Map Declaration */
 static constexpr uint8_t FLASH_CNT    =   0x00;   // Flash memory write count
 static constexpr uint8_t XGYRO_OUT    =   0x04;   // X-axis gyroscope output
 static constexpr uint8_t YGYRO_OUT    =   0x06;   // Y-axis gyroscope output
@@ -67,8 +67,7 @@ static constexpr uint8_t LOT_ID2      =   0x54;   // Lot identification number
 static constexpr uint8_t PROD_ID      =   0x56;   // Product identifier
 static constexpr uint8_t SERIAL_NUM   =   0x58;   // Lot-specific serial number
 
-/* ADIS16448 Constants */
-const double delta_angle_sf = 2160.0 / 2147483648.0;
+/** @brief ADIS16448 Static Constants */
 const double rad_to_deg = 57.2957795;
 const double deg_to_rad = 0.0174532;
 const double grav = 9.81;
@@ -224,7 +223,7 @@ private:
 
   void Close();
 
-  // AHRS yaw axis
+  // User-specified yaw axis
   IMUAxis m_yaw_axis;
 
   // Last read values (post-scaling)
@@ -263,10 +262,6 @@ private:
   double m_integ_gyro_x = 0.0;
   double m_integ_gyro_y = 0.0;
   double m_integ_gyro_z = 0.0;
-
-  // Last sample time
-  double m_last_sample_time = 0.0;
-  double timestamp_old = 0;
 
   //Complementary filter functions
   double FormatFastConverge(double compAngle, double accAngle);
