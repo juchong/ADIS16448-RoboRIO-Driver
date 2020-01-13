@@ -75,8 +75,6 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Item Name="FPGA_AnalogTriggerOutType.ctl" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/AnalogTrigger/FPGA_AnalogTriggerOutType.ctl"/>
 				<Item Name="WPI_SPIDevRef.ctl" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/SPI/WPI_SPIDevRef.ctl"/>
 				<Item Name="Clear Errors.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/error.llb/Clear Errors.vi"/>
-				<Item Name="WPI_UtilitiesFRC FPGATime.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesFRC FPGATime.vi"/>
-				<Item Name="FPGA_UtilitiesRead LocalTime.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/Utilities/FPGA_UtilitiesRead LocalTime.vi"/>
 				<Item Name="FPGA_SystemGet.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemGet.vi"/>
 				<Item Name="FPGA_SystemFRC FPGA Ref.ctl" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemFRC FPGA Ref.ctl"/>
 				<Item Name="FPGA_SystemStart Async Agent.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemStart Async Agent.vi"/>
@@ -200,8 +198,9 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Property Name="Bld_localDestDir" Type="Path">../builds/ADIS16448-IMU/ThirdParty</Property>
 				<Property Name="Bld_localDestDirType" Type="Str">relativeToProject</Property>
 				<Property Name="Bld_previewCacheID" Type="Str">{5C9CA66C-F16B-4A3B-95C3-90689364D2FE}</Property>
-				<Property Name="Bld_version.build" Type="Int">21</Property>
-				<Property Name="Bld_version.major" Type="Int">1</Property>
+				<Property Name="Bld_version.build" Type="Int">2</Property>
+				<Property Name="Bld_version.major" Type="Int">2020</Property>
+				<Property Name="Bld_version.minor" Type="Int">1</Property>
 				<Property Name="Destination[0].destName" Type="Str">Destination Directory</Property>
 				<Property Name="Destination[0].path" Type="Path">../builds/ADIS16448-IMU/ThirdParty</Property>
 				<Property Name="Destination[0].path.type" Type="Str">relativeToProject</Property>
@@ -217,7 +216,7 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Property Name="Destination[3].path" Type="Path">../builds/ADIS16448-IMU/ThirdParty/ADI/ADIS16448/SubVI</Property>
 				<Property Name="Destination[3].path.type" Type="Str">relativeToProject</Property>
 				<Property Name="DestinationCount" Type="Int">4</Property>
-				<Property Name="Source[0].itemID" Type="Str">{17649CEE-C42D-4D4A-8DB8-91568381A9F4}</Property>
+				<Property Name="Source[0].itemID" Type="Str">{A6C01137-4453-425C-B085-8C79531CEF7E}</Property>
 				<Property Name="Source[0].type" Type="Str">Container</Property>
 				<Property Name="Source[1].Container.applyDestination" Type="Bool">true</Property>
 				<Property Name="Source[1].Container.applyInclusion" Type="Bool">true</Property>
@@ -250,7 +249,7 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Property Name="NIPKG_installerArtifacts" Type="Str"></Property>
 				<Property Name="NIPKG_installerBuiltBefore" Type="Bool">false</Property>
 				<Property Name="NIPKG_installerDestination" Type="Path"></Property>
-				<Property Name="NIPKG_lastBuiltPackage" Type="Str">adis16470-imu_2020.0.0-5_windows_all.nipkg</Property>
+				<Property Name="NIPKG_lastBuiltPackage" Type="Str">adis16448-imu_2020.1.0-1_windows_all.nipkg</Property>
 				<Property Name="NIPKG_license" Type="Ref"></Property>
 				<Property Name="NIPKG_releaseNotes" Type="Str"></Property>
 				<Property Name="NIPKG_storeProduct" Type="Bool">false</Property>
@@ -258,7 +257,7 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Property Name="PKG_actions.Count" Type="Int">0</Property>
 				<Property Name="PKG_autoIncrementBuild" Type="Bool">true</Property>
 				<Property Name="PKG_autoSelectDeps" Type="Bool">false</Property>
-				<Property Name="PKG_buildNumber" Type="Int">0</Property>
+				<Property Name="PKG_buildNumber" Type="Int">2</Property>
 				<Property Name="PKG_buildSpecName" Type="Str">ADIS16448 IMU Package</Property>
 				<Property Name="PKG_dependencies.Count" Type="Int">0</Property>
 				<Property Name="PKG_description" Type="Str"></Property>
@@ -307,7 +306,7 @@ This example expects a USB cable connected from your development PC to the Type 
 				<Property Name="PKG_sources[0].ID" Type="Ref">/My Computer/Build Specifications/ADIS16448 IMU</Property>
 				<Property Name="PKG_sources[0].Type" Type="Str">Build</Property>
 				<Property Name="PKG_synopsis" Type="Str">ADIS16448 IMU Library for FIRST Robotics and the RoboRIO Built Around WPILib</Property>
-				<Property Name="PKG_version" Type="Str">2020.0.0</Property>
+				<Property Name="PKG_version" Type="Str">2020.1.0</Property>
 			</Item>
 		</Item>
 	</Item>
@@ -392,7 +391,6 @@ AddOutputFilter chunkFilter
 		<Property Name="target.webservices.SecurityAPIKey" Type="Str">PqVr/ifkAQh+lVrdPIykXlFvg12GhhQFR8H9cUhphgg=:pTe9HRlQuMfJxAG6QCGq7UvoUpJzAzWGKy5SbZ+roSU=</Property>
 		<Property Name="target.webservices.ValidTimestampWindow" Type="Int">15</Property>
 		<Item Name="ADIS16448 IMU Example.vi" Type="VI" URL="../ADIS16448 IMU Example.vi"/>
-		<Item Name="ADIS16448 Status.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Status.vi"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="Acquire Semaphore.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/semaphor.llb/Acquire Semaphore.vi"/>
@@ -440,7 +438,6 @@ AddOutputFilter chunkFilter
 				<Item Name="FPGA_SystemGet.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemGet.vi"/>
 				<Item Name="FPGA_SystemOpen.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemOpen.vi"/>
 				<Item Name="FPGA_SystemStart Async Agent.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/FPGA_SystemStart Async Agent.vi"/>
-				<Item Name="FPGA_UtilitiesRead LocalTime.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/Utilities/FPGA_UtilitiesRead LocalTime.vi"/>
 				<Item Name="GetNamedSemaphorePrefix.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/semaphor.llb/GetNamedSemaphorePrefix.vi"/>
 				<Item Name="GetSystemError.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/SystemInterfaces/System/GetSystemError.vi"/>
 				<Item Name="High Resolution Polling Wait.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/High Resolution Polling Wait.vi"/>
@@ -535,12 +532,11 @@ AddOutputFilter chunkFilter
 				<Item Name="WPI_SPIWrite.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/SPI/WPI_SPIWrite.vi"/>
 				<Item Name="WPI_UtilitiesERRGetRefNum.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesERRGetRefNum.vi"/>
 				<Item Name="WPI_UtilitiesFRC Build Error.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesFRC Build Error.vi"/>
-				<Item Name="WPI_UtilitiesFRC FPGATime.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesFRC FPGATime.vi"/>
 				<Item Name="WPI_UtilitiesFRC SendMessageToConsole.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesFRC SendMessageToConsole.vi"/>
 				<Item Name="WPI_UtilitiesTimebaseConstants.vi" Type="VI" URL="/&lt;vilib&gt;/Rock Robotics/WPI/Utilities/WPI_UtilitiesTimebaseConstants.vi"/>
 			</Item>
-			<Item Name="ADIS16448 Calibration Time.ctl" Type="VI" URL="../ADIS16448Lib/Typedef/ADIS16448 Calibration Time.ctl"/>
 			<Item Name="ADIS16448 Command Type.ctl" Type="VI" URL="../ADIS16448Lib/Typedef/ADIS16448 Command Type.ctl"/>
+			<Item Name="ADIS16448 Config Cal Time.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Config Cal Time.vi"/>
 			<Item Name="ADIS16448 CRC.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 CRC.vi"/>
 			<Item Name="ADIS16448 Data.ctl" Type="VI" URL="../ADIS16448Lib/Typedef/ADIS16448 Data.ctl"/>
 			<Item Name="ADIS16448 Device Reference.ctl" Type="VI" URL="../ADIS16448Lib/Typedef/ADIS16448 Device Reference.ctl"/>
@@ -552,6 +548,8 @@ AddOutputFilter chunkFilter
 			<Item Name="ADIS16448 Read Register.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Read Register.vi"/>
 			<Item Name="ADIS16448 Read.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Read.vi"/>
 			<Item Name="ADIS16448 Recalibrate.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Recalibrate.vi"/>
+			<Item Name="ADIS16448 RefNum Registry Get.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 RefNum Registry Get.vi"/>
+			<Item Name="ADIS16448 RefNum Registry Set.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 RefNum Registry Set.vi"/>
 			<Item Name="ADIS16448 Register.ctl" Type="VI" URL="../ADIS16448Lib/Typedef/ADIS16448 Register.ctl"/>
 			<Item Name="ADIS16448 Reset.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Reset.vi"/>
 			<Item Name="ADIS16448 Scale Data.vi" Type="VI" URL="../ADIS16448Lib/SubVI/ADIS16448 Scale Data.vi"/>
