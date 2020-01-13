@@ -16,18 +16,18 @@ Once you double-click on the installer file, the NI Package Manager will walk yo
 
 The package manager window should like like below if the library was installed successfully.
 
-![ADIS16448 Install Complete](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/docs/installed.PNG)
+![ADIS16448 Install Complete](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/images/installed.PNG)
 
 ## Using the Library
 The LabVIEW driver can be used like any other third-party library. All .vi's can be found in the pallet shown below:
 
-![ADIS16448 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/docs/menu.PNG)
+![ADIS16448 LabVIEW Pallet](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/images/menu.PNG)
 
 The example .vi included in this repository should look like below when successfully connected to a RoboRIO:
 
-![ADIS16448 LabVIEW Example Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/docs/labview_example.PNG)
+![ADIS16448 LabVIEW Example Front Panel](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/images/labview_example.PNG)
 
 ## Uninstalling the Library
 To uninstall the library, open the NI Package Manager and select `ADIS16448 IMU RoboRIO Driver`. 
 
-![ADIS16448 .nipkg Icon](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/docs/uninstall.PNG)
+![ADIS16448 .nipkg Icon](https://raw.githubusercontent.com/juchong/ADIS16448-RoboRIO-Driver/master/images/remove_menu.PNG)
