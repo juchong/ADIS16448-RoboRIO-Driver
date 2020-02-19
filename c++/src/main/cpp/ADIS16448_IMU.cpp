@@ -79,8 +79,8 @@ ADIS16448_IMU::ADIS16448_IMU(IMUAxis yaw_axis, SPI::Port port, uint16_t cal_time
   WriteRegister(SMPL_PRD, 0x0001);
   // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP)
   WriteRegister(MSC_CTRL, 0x0016);
-  // Configure IMU internal Bartlett filter
-  WriteRegister(SENS_AVG, 0x0402);
+  // Disable IMU internal Bartlett filter
+  WriteRegister(SENS_AVG, 0x0400);
   // Clear offset registers
   WriteRegister(XGYRO_OFF, 0x0000);
   WriteRegister(YGYRO_OFF, 0x0000);

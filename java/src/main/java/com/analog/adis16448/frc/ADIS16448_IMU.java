@@ -227,8 +227,8 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
     writeRegister(SMPL_PRD, 0x0001);
     // Enable Data Ready (LOW = Good Data) on DIO1 (PWM0 on MXP)
     writeRegister(MSC_CTRL, 0x0016);
-    // Configure IMU internal Bartlett filter
-    writeRegister(SENS_AVG, 0x0402);
+    // Disable IMU internal Bartlett filter
+    writeRegister(SENS_AVG, 0x0400);
     // Clear offset registers
     writeRegister(XGYRO_OFF, 0x0000);
     writeRegister(YGYRO_OFF, 0x0000);
