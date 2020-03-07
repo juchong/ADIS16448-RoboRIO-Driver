@@ -211,6 +211,8 @@ class ADIS16448_IMU : public GyroBase {
 
     int SetYawAxis(IMUAxis yaw_axis);
 
+    int ConfigDecRate(uint16_t DecimationRate);
+
 private:
 
   bool SwitchToStandardSPI();

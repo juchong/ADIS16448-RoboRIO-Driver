@@ -140,8 +140,10 @@ bool ADIS16448_IMU::SwitchToStandardSPI(){
       Wait(0.1);
       int data_count = m_spi->ReadAutoReceivedData(trashBuffer, 0, 0_s);
       while (data_count > 0) {
+        /* Dequeue 200 at a time, or the remainder of the buffer if less than 200 */
+        m_spi->ReadAutoReceivedData(trashBuffer, std::min(200, data_count), 0_s);
+        /* Update remaining buffer count */
         data_count = m_spi->ReadAutoReceivedData(trashBuffer, 0, 0_s);
-        m_spi->ReadAutoReceivedData(trashBuffer, data_count, 0_s);
       }
       std::cout << "Paused the auto SPI successfully!" << std::endl;
       }
@@ -381,11 +383,13 @@ void ADIS16448_IMU::Acquire() {
   // Set data packet length
   const int dataset_len = 29; // 18 data points + timestamp
 
+  const int BUFFER_SIZE = 4000;
+
   //struct to store accumulate data
   offset_data sample_data;
 
   // This buffer can contain many datasets
-  uint32_t buffer[4000];
+  uint32_t buffer[BUFFER_SIZE];
   int data_count = 0;
   int data_remainder = 0;
   int data_to_read = 0;
@@ -423,6 +427,12 @@ void ADIS16448_IMU::Acquire() {
       data_count = m_spi->ReadAutoReceivedData(buffer,0,0_s); // Read number of bytes currently stored in the buffer
       data_remainder = data_count % dataset_len; // Check if frame is incomplete
       data_to_read = data_count - data_remainder;  // Remove incomplete data from read count
+      /* Want to cap the data to read in a single read at the buffer size */
+      if(data_to_read > BUFFER_SIZE)
+      {
+          DriverStation::ReportWarning("ADIS16448 data processing thread overrun has occurred!");
+          data_to_read = BUFFER_SIZE - (BUFFER_SIZE % dataset_len);
+      }
       m_spi->ReadAutoReceivedData(buffer, data_to_read, 0_s); // Read data from DMA buffer
 
       // Could be multiple data sets in the buffer. Handle each one.
@@ -626,6 +636,43 @@ double ADIS16448_IMU::CompFilterProcess(double compAngle, double accelAngle, dou
     compAngle = compAngle - 2.0 * M_PI;
   }
   return compAngle;
+}
+
+int ADIS16448_IMU::ConfigDecRate(uint16_t DecimationSetting)
+{
+  uint16_t writeValue = DecimationSetting;
+  uint16_t readbackValue;
+  if(!SwitchToStandardSPI()) {
+    DriverStation::ReportError("Failed to configure/reconfigure standard SPI.");
+    return 2;
+  }
+
+  /* Check max */
+  if(DecimationSetting > 9) {
+    DriverStation::ReportError("Attemted to write an invalid decimation value. Capping at 9");
+    DecimationSetting = 9;
+  }
+
+  /* Shift decimation setting to correct position and select internal sync */
+  writeValue = (DecimationSetting << 8) | 0x1; 
+  
+  /* Apply to IMU */
+  WriteRegister(SMPL_PRD, writeValue);
+
+  /* Perform read back to verify write */
+  readbackValue = ReadRegister(SMPL_PRD);
+
+  /* Throw error for invalid write */
+  if(readbackValue != writeValue)
+  {
+    DriverStation::ReportError("ADIS16448 SMPL_PRD write failed.");
+  }
+
+  if(!SwitchToAutoSPI()) {
+    DriverStation::ReportError("Failed to configure/reconfigure auto SPI.");
+    return 2;
+  }
+  return 0;
 }
 
 /**
