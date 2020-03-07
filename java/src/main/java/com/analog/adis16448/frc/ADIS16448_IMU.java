@@ -496,7 +496,7 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
     // ByteBuffer buf = ByteBuffer.allocateDirect(2);
     final byte[] buf = new byte[2];
     // low byte
-    buf[0] = (byte) ((0x80 | reg) | 0x10);
+    buf[0] = (byte) (0x80 | reg);
     buf[1] = (byte) (val & 0xff);
     m_spi.write(buf, 2);
     // high byte
