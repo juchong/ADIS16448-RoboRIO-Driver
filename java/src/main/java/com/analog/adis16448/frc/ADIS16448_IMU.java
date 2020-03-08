@@ -327,8 +327,11 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
         try{Thread.sleep(100);}catch(InterruptedException e){}
         int data_count = m_spi.readAutoReceivedData(trashBuffer, 0, 0);
         while (data_count > 0) {
+          /* Dequeue 200 at a time, or the remainder of the buffer if less than 200 */
+          m_spi.readAutoReceivedData(trashBuffer, Math.min(200, data_count), 0);
+          /* Update remaining buffer count */
           data_count = m_spi.readAutoReceivedData(trashBuffer, 0, 0);
-          m_spi.readAutoReceivedData(trashBuffer, data_count, 0);
+          
         }
         System.out.println("Paused auto SPI successfully.");
       }
@@ -414,6 +417,46 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
     }
     return true;
   }
+  
+  public int configDecRate(int m_decRate) {
+      int writeValue = m_decRate;
+      int readbackValue;
+      if(!switchToStandardSPI()) {
+        DriverStation.reportError("Failed to configure/reconfigure standard SPI.", false);
+        return 2;
+      }
+    
+      /* Check max */
+      if(m_decRate > 9) {
+        DriverStation.reportError("Attemted to write an invalid decimation value. Capping at 9", false);
+        m_decRate = 9;
+      }
+      if(m_decRate < 0) {
+        DriverStation.reportError("Attemted to write an invalid decimation value. Capping at 0", false);
+        m_decRate = 0;
+      }
+    
+      /* Shift decimation setting to correct position and select internal sync */
+      writeValue = (m_decRate << 8) | 0x1; 
+    
+      /* Apply to IMU */
+      writeRegister(SMPL_PRD, writeValue);
+    
+      /* Perform read back to verify write */
+      readbackValue = readRegister(SMPL_PRD);
+    
+      /* Throw error for invalid write */
+      if(readbackValue != writeValue)
+      {
+        DriverStation.reportError("ADIS16448 SMPL_PRD write failed.", false);
+      }
+    
+      if(!switchToAutoSPI()) {
+        DriverStation.reportError("Failed to configure/reconfigure auto SPI.", false);
+        return 2;
+      }
+      return 0;
+    }
 
   /**
    * 
@@ -493,7 +536,6 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
   }
 
   private void writeRegister(final int reg, final int val) {
-    // ByteBuffer buf = ByteBuffer.allocateDirect(2);
     final byte[] buf = new byte[2];
     // low byte
     buf[0] = (byte) (0x80 | reg);
@@ -552,9 +594,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
   private void acquire() {
     // Set data packet length
     final int dataset_len = 29; // 18 data points + timestamp
+    final int BUFFER_SIZE = 4000;
 
     // Set up buffers and variables
-    int[] buffer = new int[4000];
+    int[] buffer = new int[BUFFER_SIZE];
     int data_count = 0;
     int data_remainder = 0;
     int data_to_read = 0;
@@ -595,6 +638,10 @@ public class ADIS16448_IMU extends GyroBase implements Gyro {
         data_count = m_spi.readAutoReceivedData(buffer, 0, 0); // Read number of bytes currently stored in the buffer
         data_remainder = data_count % dataset_len; // Check if frame is incomplete. Add 1 because of timestamp
         data_to_read = data_count - data_remainder; // Remove incomplete data from read count
+        if (data_to_read > BUFFER_SIZE) {
+          DriverStation.reportWarning("ADIS16448 data processing thread overrun has occurred!", false);
+          data_to_read = BUFFER_SIZE - (BUFFER_SIZE % dataset_len);
+        }
         m_spi.readAutoReceivedData(buffer, data_to_read, 0); // Read data from DMA buffer (only complete sets)
         
         // Could be multiple data sets in the buffer. Handle each one.
