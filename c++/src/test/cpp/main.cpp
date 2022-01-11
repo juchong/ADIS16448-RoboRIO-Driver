@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------*/
 /* ADIS16448 RoboRIO Driver (c) by Juan Chong
 /*
-/* ADIS16448 RoboRIO Driver is licensed under a
+/* The ADIS16448 RoboRIO Driver is licensed under a
 /* Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
 /*
 /* You should have received a copy of the license along with this
