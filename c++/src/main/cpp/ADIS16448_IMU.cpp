@@ -1,10 +1,11 @@
 /*----------------------------------------------------------------------------*/
-/* Copyright (c) 2016-2020 Analog Devices Inc. All Rights Reserved.           */
-/* Open Source Software - may be modified and shared by FRC teams. The code   */
-/* must be accompanied by the FIRST BSD license file in the root directory of */
-/* the project.                                                               */
-/*                                                                            */
-/* Modified by Juan Chong - frcsupport@analog.com                             */
+/* ADIS16448 RoboRIO Driver (c) by Juan Chong
+/*
+/* ADIS16448 RoboRIO Driver is licensed under a
+/* Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+/*
+/* You should have received a copy of the license along with this
+/* work. If not, see <http://creativecommons.org/licenses/by-nc-sa/4.0/>.                             */
 /*----------------------------------------------------------------------------*/
 
 #include <string>

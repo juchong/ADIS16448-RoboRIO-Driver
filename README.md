@@ -1,5 +1,7 @@
 # ADIS16448 IMU Interface Library for FIRST Robotics
 
+## WARNING: This repository has been **deprecated** and will no longer be updated! 
+
 ## Introduction
 
 These libraries allow mentors, students, and engineers to quickly get started using the ADIS16448 Inertial Measurement Unit (IMU). This compact module provides teams with a high-performance, ten-degree-of-freedom (DoF), calibrated, feedback for their FRC robots. The module packages several gyroscopes and accelerometers in a small, robust package, perfect for high-performance robotics (such as FRC). 
